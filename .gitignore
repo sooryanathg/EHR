@@ -1,0 +1,92 @@
+# General
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+npm-debug.*
+*.log
+yarn-debug.log*
+yarn-error.log*
+
+# Mobile App (asha-ehr)
+asha-ehr/.expo/
+asha-ehr/web-build/
+asha-ehr/dist/
+asha-ehr/build/
+asha-ehr/*.jks
+asha-ehr/*.p8
+asha-ehr/*.p12
+asha-ehr/*.key
+asha-ehr/*.mobileprovision
+asha-ehr/*.orig.*
+
+# Android
+asha-ehr/android/.gradle
+asha-ehr/android/build/
+asha-ehr/android/local.properties
+asha-ehr/android/*.iml
+asha-ehr/android/.idea/
+asha-ehr/android/.project
+asha-ehr/android/app/release/
+asha-ehr/android/**/*.hprof
+asha-ehr/android/**/*.keystore
+!asha-ehr/android/app/debug.keystore
+
+# iOS
+asha-ehr/ios/Pods/
+asha-ehr/ios/build/
+asha-ehr/ios/*.pbxuser
+!asha-ehr/ios/default.pbxuser
+asha-ehr/ios/*.mode1v3
+!asha-ehr/ios/default.mode1v3
+asha-ehr/ios/*.mode2v3
+!asha-ehr/ios/default.mode2v3
+asha-ehr/ios/*.perspectivev3
+!asha-ehr/ios/default.perspectivev3
+asha-ehr/ios/xcuserdata
+asha-ehr/ios/*.xccheckout
+asha-ehr/ios/*.moved-aside
+asha-ehr/ios/DerivedData
+asha-ehr/ios/*.hmap
+asha-ehr/ios/*.ipa
+asha-ehr/ios/*.xcuserstate
+asha-ehr/ios/project.xcworkspace
+
+# Web Dashboard (phc-dashboard)
+phc-dashboard/.next/
+phc-dashboard/out/
+phc-dashboard/build/
+phc-dashboard/.vercel
+phc-dashboard/.env*.local
+
+# IDE and Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+coverage/
+__tests__/
+*.test.js
+*.spec.js
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Metro Bundler
+.metro-health-check*

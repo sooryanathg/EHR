@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isPHCStaff() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'phc' || request.auth.token.role == 'admin');
+    }
+    
+    function isASHA() {
+      return isAuthenticated() && request.auth.token.role == 'asha';
+    }
+    
+    // Patient collection rules
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isASHA() || isPHCStaff();
+      allow delete: if isPHCStaff();
+    }
+    
+    // Visits collection rules
+    match /visits/{visitId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isASHA() || isPHCStaff();
+      allow delete: if isPHCStaff();
+    }
+    
+    // Vaccinations collection rules
+    match /vaccinations/{vaccinationId} {
+      allow read: if isAuthenticated();
+      allow write: if isASHA() || isPHCStaff();
+    }
+    
+    // User profiles collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isPHCStaff());
+      allow write: if isPHCStaff();
+    }
+  }
+}
