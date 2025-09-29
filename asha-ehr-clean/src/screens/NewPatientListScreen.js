@@ -9,7 +9,9 @@ import {
   TextInput,
   ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { PatientService } from '../database/patientService';
+import { AuthService } from '../auth/authService';
 
 const NewPatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
@@ -42,15 +44,13 @@ const NewPatientListScreen = ({ navigation }) => {
 
   const applyFilters = (data, filter, search) => {
     let result = [...data];
-    
-    // Apply type filter
+
     if (filter !== 'all') {
       result = result.filter(patient => patient.type === filter);
     }
 
-    // Apply search
     if (search) {
-      result = result.filter(patient => 
+      result = result.filter(patient =>
         patient.name.toLowerCase().includes(search.toLowerCase()) ||
         patient.village.toLowerCase().includes(search.toLowerCase()) ||
         (patient.health_id && patient.health_id.toLowerCase().includes(search.toLowerCase()))
@@ -76,6 +76,15 @@ const NewPatientListScreen = ({ navigation }) => {
       case 'lactating': return 'Lactating Woman';
       case 'child': return 'Child';
       default: return type;
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.clearPIN(); // clears 'asha_pin' and 'user_role'
+      navigation.replace('Login');
+    } catch (e) {
+      console.error('Logout failed:', e);
     }
   };
 
@@ -108,90 +117,136 @@ const NewPatientListScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search patients..."
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-        <View style={styles.filterButtons}>
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'all' && styles.activeFilter]}
-            onPress={() => handleFilterChange('all')}
-          >
-            <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'pregnant' && styles.activeFilter]}
-            onPress={() => handleFilterChange('pregnant')}
-          >
-            <Text style={[styles.filterText, activeFilter === 'pregnant' && styles.activeFilterText]}>
-              Pregnant
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'lactating' && styles.activeFilter]}
-            onPress={() => handleFilterChange('lactating')}
-          >
-            <Text style={[styles.filterText, activeFilter === 'lactating' && styles.activeFilterText]}>
-              Lactating
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'child' && styles.activeFilter]}
-            onPress={() => handleFilterChange('child')}
-          >
-            <Text style={[styles.filterText, activeFilter === 'child' && styles.activeFilterText]}>
-              Children
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.topBar}>
+            <Text style={styles.headerTitle}>Patients</Text>
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={handleLogout}
+              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
-      ) : (
-        <FlatList
-          data={filteredPatients}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderPatientCard}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                {searchQuery || activeFilter !== 'all' 
-                  ? 'No patients match your search'
-                  : 'No patients added yet'}
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search patients..."
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+          <View style={styles.filterButtons}>
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilter === 'all' && styles.activeFilter]}
+              onPress={() => handleFilterChange('all')}
+            >
+              <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>
+                All
               </Text>
-            </View>
-          )}
-        />
-      )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilter === 'pregnant' && styles.activeFilter]}
+              onPress={() => handleFilterChange('pregnant')}
+            >
+              <Text style={[styles.filterText, activeFilter === 'pregnant' && styles.activeFilterText]}>
+                Pregnant
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilter === 'lactating' && styles.activeFilter]}
+              onPress={() => handleFilterChange('lactating')}
+            >
+              <Text style={[styles.filterText, activeFilter === 'lactating' && styles.activeFilterText]}>
+                Lactating
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilter === 'child' && styles.activeFilter]}
+              onPress={() => handleFilterChange('child')}
+            >
+              <Text style={[styles.filterText, activeFilter === 'child' && styles.activeFilterText]}>
+                Children
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddPatient')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-    </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
+        ) : (
+          <FlatList
+            data={filteredPatients}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderPatientCard}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  {searchQuery || activeFilter !== 'all'
+                    ? 'No patients match your search'
+                    : 'No patients added yet'}
+                </Text>
+              </View>
+            )}
+          />
+        )}
+
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('AddPatient')}
+          accessibilityRole="button"
+          accessibilityLabel="Add new patient"
+        >
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   header: {
     backgroundColor: '#fff',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     marginBottom: 5,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2c3e50',
+  },
+  logoutBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+    backgroundColor: 'transparent',
+  },
+  logoutText: {
+    color: '#e74c3c',
+    fontWeight: '600',
   },
   searchInput: {
     backgroundColor: '#f5f5f5',
