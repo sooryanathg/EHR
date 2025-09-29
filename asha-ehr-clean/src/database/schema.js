@@ -48,6 +48,10 @@ export const initDatabase = async () => {
       record_type TEXT NOT NULL,
       record_id INTEGER NOT NULL,
       action TEXT NOT NULL CHECK (action IN ('create','update','delete')),
+      data TEXT,
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','syncing','completed','failed')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      synced INTEGER DEFAULT 0
       data TEXT NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','in_progress','completed','failed')),
       retry_count INTEGER DEFAULT 0,

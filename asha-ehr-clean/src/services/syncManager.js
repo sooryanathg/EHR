@@ -42,9 +42,12 @@ class SyncManager {
       const unsynced = await SyncQueueService.getUnsynced();
       
       // Process each type of record
-      await this.syncRecords('patients', unsynced.patients);
-      await this.syncRecords('visits', unsynced.visits);
-      await this.syncRecords('vaccinations', unsynced.vaccinations);
+      await this.syncRecords('patient', unsynced.patients);
+      await this.syncRecords('visit', unsynced.visits);
+      await this.syncRecords('vaccination', unsynced.vaccinations);
+
+      // Update local sync status
+      await SyncQueueService.markAsSynced(unsynced);
 
       console.log('Sync completed successfully');
     } catch (error) {
@@ -55,13 +58,33 @@ class SyncManager {
   }
 
   async syncRecords(type, records) {
+    const { FirestoreSync } = require('../services/firestoreSync');
+    
     for (const record of records) {
       try {
-        // Here you would implement the actual API calls to sync with your backend
-        // For now, we'll just mark them as synced
-        await SyncQueueService.markRecordSynced(type, record.id);
+        let firestoreId;
+        
+        // Sync based on record type
+        switch(type) {
+          case 'patient':
+            firestoreId = await FirestoreSync.syncPatient(record);
+            break;
+          case 'visit':
+            firestoreId = await FirestoreSync.syncVisit(record);
+            break;
+          case 'vaccination':
+            firestoreId = await FirestoreSync.syncVaccination(record);
+            break;
+        }
+        
+        // Mark as synced with Firestore ID
+        if (firestoreId) {
+          await SyncQueueService.markRecordSynced(type, record.id, firestoreId);
+          console.log(`Synced ${type} record:`, record.id);
+        }
       } catch (error) {
         console.error(`Failed to sync ${type} record:`, record.id, error);
+        throw error; // Propagate error to handle it in syncData
       }
     }
   }
