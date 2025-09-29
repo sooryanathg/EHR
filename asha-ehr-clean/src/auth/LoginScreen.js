@@ -10,13 +10,29 @@ import {
   Platform
 } from 'react-native';
 import { AuthService } from './authService';
+import { auth } from '../lib/firebase';
+
+import { onAuthStateChanged } from 'firebase/auth';
 
 const LoginScreen = ({ navigation }) => {
-  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isPinSet, setIsPinSet] = useState(false);
 
   useEffect(() => {
     checkExistingPin();
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('Firebase user signed in:', user.uid);
+      } else {
+        console.log('No Firebase user');
+      }
+    });
+
+    return () => unsub();
   }, []);
 
   const checkExistingPin = async () => {
@@ -30,52 +46,44 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    console.log('Login attempt with PIN:', pin);
-    if (pin.length < 4) {
-      Alert.alert('Error', 'Please enter a valid PIN');
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
-    
+
     try {
-      const isValid = await AuthService.verifyASHA_PIN(pin);
-      console.log('PIN verification result:', isValid);
-      if (isValid) {
-        navigation.replace('PatientList');
-      } else {
-        Alert.alert('Error', 'Invalid PIN');
-        setPin('');
-      }
+      await AuthService.loginASHA(email, password);
+      navigation.replace('PatientList');
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'Failed to verify PIN');
+      Alert.alert('Login failed', error.message || 'Unable to login');
     }
   };
 
-  const handleFirstTimeSetup = async () => {
-    console.log('First time setup with PIN:', pin);
-    if (pin.length < 4) {
-      Alert.alert('Error', 'Please enter a PIN with at least 4 digits');
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
-    
-    try {
-      const success = await AuthService.setASHA_PIN(pin);
-      console.log('PIN setup result:', success);
-      if (success) {
-        Alert.alert('Success', 'PIN set successfully');
-        navigation.replace('PatientList');
-      } else {
-        Alert.alert('Error', 'Failed to set PIN');
-        setPin('');
-      }
-    } catch (error) {
-      console.error('Setup error:', error);
-      Alert.alert('Error', 'Failed to set up PIN');
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
     }
-    
-    Alert.alert('Success', 'PIN set successfully!', [
-      { text: 'OK', onPress: () => navigation.replace('PatientList') }
-    ]);
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    try {
+      await AuthService.registerASHA(email, password);
+      Alert.alert('Success', 'Registration complete');
+      navigation.replace('PatientList');
+    } catch (error) {
+      console.error('Register error:', error);
+      Alert.alert('Registration failed', error.message || 'Unable to register');
+    }
   };
 
   return (
@@ -90,30 +98,69 @@ const LoginScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Enter PIN</Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            value={pin}
-            onChangeText={setPin}
-            placeholder="Enter your PIN"
-            keyboardType="numeric"
-            secureTextEntry
-            maxLength={6}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
 
-          <TouchableOpacity
-            style={[styles.button, styles.loginButton]}
-            onPress={handleLogin}
-          >
-            <Text style={styles.buttonText}>Login as ASHA Worker</Text>
-          </TouchableOpacity>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Enter password"
+            secureTextEntry
+          />
 
-          <TouchableOpacity
-            style={[styles.button, styles.setupButton]}
-            onPress={handleFirstTimeSetup}
-          >
-            <Text style={styles.setupButtonText}>First Time Setup</Text>
-          </TouchableOpacity>
+          {/* Confirm password only shown in registration mode below */}
+
+          {!isRegistering ? (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.loginButton]}
+                onPress={handleLogin}
+              >
+                <Text style={styles.buttonText}>Login</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.setupButton]}
+                onPress={() => setIsRegistering(true)}
+              >
+                <Text style={styles.setupButtonText}>Register (ASHA)</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm password"
+                secureTextEntry
+              />
+
+              <TouchableOpacity
+                style={[styles.button, styles.loginButton]}
+                onPress={handleRegister}
+              >
+                <Text style={styles.buttonText}>Complete Registration</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.setupButton]}
+                onPress={() => setIsRegistering(false)}
+              >
+                <Text style={styles.setupButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>

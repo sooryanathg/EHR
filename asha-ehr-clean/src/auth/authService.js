@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
+import { auth } from '../lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
 
 const PIN_KEY = 'asha_pin';
 const USER_ROLE_KEY = 'user_role';
@@ -24,6 +26,37 @@ export const AuthService = {
     }
   },
 
+  // Register ASHA using email/password in Firebase
+  registerASHA: async (email, password) => {
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
+      // persist firebase uid for sync
+      if (userCred && userCred.user && userCred.user.uid) {
+        await AsyncStorage.setItem('firebase_uid', userCred.user.uid);
+      }
+      return userCred.user;
+    } catch (error) {
+      console.error('Error registering ASHA:', error);
+      throw error;
+    }
+  },
+
+  // Login ASHA using Firebase email/password
+  loginASHA: async (email, password) => {
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
+      if (userCred && userCred.user && userCred.user.uid) {
+        await AsyncStorage.setItem('firebase_uid', userCred.user.uid);
+      }
+      return userCred.user;
+    } catch (error) {
+      console.error('Error logging in ASHA:', error);
+      throw error;
+    }
+  },
+
   // Verify ASHA PIN
   verifyASHA_PIN: async (pin) => {
     try {
@@ -31,7 +64,18 @@ export const AuthService = {
       if (!storedHashedPIN) return false;
       
       const hashedInputPIN = AuthService.hashPIN(pin);
-      return storedHashedPIN === hashedInputPIN;
+      const isValid = storedHashedPIN === hashedInputPIN;
+      if (isValid) {
+        // Sign into Firebase (anonymous) so the app has an authenticated Firebase user
+        try {
+          await signInAnonymously(auth);
+        } catch (firebaseError) {
+          console.warn('Firebase anonymous sign-in failed:', firebaseError);
+          // proceed — local auth still succeeds even if Firebase sign-in fails
+        }
+      }
+
+      return isValid;
     } catch (error) {
       console.error('Error verifying PIN:', error);
       return false;
@@ -52,10 +96,34 @@ export const AuthService = {
   // Clear stored PIN (for logout)
   clearPIN: async () => {
     try {
-      await AsyncStorage.multiRemove([PIN_KEY, USER_ROLE_KEY]);
+      await AsyncStorage.multiRemove([PIN_KEY, USER_ROLE_KEY, 'firebase_uid']);
+      // Also sign out from Firebase when clearing local PIN
+      try {
+        await signOut(auth);
+      } catch (firebaseSignOutError) {
+        console.warn('Firebase signOut failed:', firebaseSignOutError);
+      }
       return true;
     } catch (error) {
       console.error('Error clearing PIN:', error);
+      return false;
+    }
+  }
+
+  ,
+
+  // Logout helper: sign out from Firebase and clear stored uid and role
+  logout: async () => {
+    try {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.warn('Firebase signOut failed during logout:', e);
+      }
+      await AsyncStorage.multiRemove([USER_ROLE_KEY, 'firebase_uid', PIN_KEY]);
+      return true;
+    } catch (error) {
+      console.error('Error during logout:', error);
       return false;
     }
   }

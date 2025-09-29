@@ -1,11 +1,25 @@
 import db from './schema';
+import { FirestoreSync } from '../services/firestoreSync';
+
+const getTableName = (recordType) => {
+  // Convert plural to singular if needed
+  const singular = recordType.replace(/s$/, '');
+  return singular + 's';
+};
 
 export const SyncQueueService = {
   async addToSyncQueue(recordType, recordId, action) {
+    // Get the record data based on type
+    const table = getTableName(recordType);
+    const record = await db.getFirstAsync(
+      `SELECT * FROM ${table} WHERE id = ?`,
+      [recordId]
+    );
+
     return db.runAsync(
-      `INSERT INTO sync_queue (record_type, record_id, action)
-       VALUES (?, ?, ?)`,
-      [recordType, recordId, action]
+      `INSERT INTO sync_queue (record_type, record_id, action, data, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [recordType, recordId, action, JSON.stringify(record)]
     );
   },
 
@@ -22,26 +36,48 @@ export const SyncQueueService = {
     );
   },
 
-  async markRecordSynced(recordType, recordId) {
-    const table = recordType + 's'; // patients, visits, vaccinations
-    return db.runAsync(
-      `UPDATE ${table} SET synced = 1 WHERE id = ?`,
-      [recordId]
+  async markRecordSynced(recordType, recordId, firestoreId) {
+    const table = getTableName(recordType);
+    
+    // Update the record in the main table
+    await db.runAsync(
+      `UPDATE ${table} SET synced = 1, firestore_id = ? WHERE id = ?`,
+      [firestoreId, recordId]
+    );
+    
+    // Update the sync queue status
+    await db.runAsync(
+      `UPDATE sync_queue SET status = 'completed', synced = 1 
+       WHERE record_type = ? AND record_id = ? AND status != 'completed'`,
+      [recordType, recordId]
     );
   },
 
   async getUnsynced() {
-    const patients = await db.getAllAsync(
-      `SELECT * FROM patients WHERE synced = 0`
+    const unsyncedQueue = await db.getAllAsync(
+      `SELECT * FROM sync_queue 
+       WHERE status IN ('pending', 'failed') 
+       ORDER BY created_at ASC`
     );
     
-    const visits = await db.getAllAsync(
-      `SELECT * FROM visits WHERE synced = 0`
-    );
+    const patients = [];
+    const visits = [];
+    const vaccinations = [];
     
-    const vaccinations = await db.getAllAsync(
-      `SELECT * FROM vaccinations WHERE synced = 0`
-    );
+    for (const item of unsyncedQueue) {
+      const data = JSON.parse(item.data);
+      switch (item.record_type) {
+        case 'patient':
+          patients.push(data);
+          break;
+        case 'visit':
+          visits.push(data);
+          break;
+        case 'vaccination':
+          vaccinations.push(data);
+          break;
+      }
+    }
     
     return {
       patients,
