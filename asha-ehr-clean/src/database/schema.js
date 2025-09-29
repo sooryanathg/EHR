@@ -48,18 +48,35 @@ export const initDatabase = async () => {
       record_type TEXT NOT NULL,
       record_id INTEGER NOT NULL,
       action TEXT NOT NULL CHECK (action IN ('create','update','delete')),
-      data TEXT,
-      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','syncing','completed','failed')),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      synced INTEGER DEFAULT 0
-      data TEXT NOT NULL,
-      status TEXT NOT NULL CHECK (status IN ('pending','in_progress','completed','failed')),
+      data TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','in_progress','completed','failed')),
       retry_count INTEGER DEFAULT 0,
       last_error TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_attempt DATETIME
     );
   `);
+
+  // Fix up any existing rows that may have NULL for data or status (migration safety)
+  try {
+    await db.execAsync(`
+      UPDATE sync_queue SET data = '{}' WHERE data IS NULL;
+      UPDATE sync_queue SET status = 'pending' WHERE status IS NULL;
+    `);
+  } catch (e) {
+    // If sync_queue doesn't exist yet, ignore the error
+    // console.warn('No sync_queue to migrate yet:', e.message);
+  }
+  // Ensure firestore_id column exists in tables (migration)
+  try {
+    await db.execAsync(`ALTER TABLE patients ADD COLUMN firestore_id TEXT;`);
+  } catch (e) { /* ignore if column exists */ }
+  try {
+    await db.execAsync(`ALTER TABLE visits ADD COLUMN firestore_id TEXT;`);
+  } catch (e) { /* ignore if column exists */ }
+  try {
+    await db.execAsync(`ALTER TABLE vaccinations ADD COLUMN firestore_id TEXT;`);
+  } catch (e) { /* ignore if column exists */ }
 };
 
 export default db;

@@ -11,87 +11,45 @@ import {
 } from 'react-native';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
-import { syncManager } from '../services/syncManager';
-import { SyncManager } from '../services/syncManager';
 
 const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       load();
-      // Try to sync when screen comes into focus
-      syncManager.syncData().catch(console.error);
     });
-    
-    // Set up periodic sync every 5 minutes
-    const syncInterval = setInterval(() => {
-      syncManager.syncData().catch(console.error);
-    }, 5 * 60 * 1000);
-    
     load();
-    
-    return () => {
-      unsubscribe();
-      clearInterval(syncInterval);
-    };
+    return unsubscribe;
   }, [navigation]);
 
   // Ensure the Logout (and Add) buttons appear in the native navigation header
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
-      const syncManager = SyncManager.getInstance();
-      await syncManager.syncData();
-      Alert.alert('Success', 'Data synchronized successfully');
-      // Reload patients to reflect any changes
-      await load();
-    } catch (error) {
-      console.error('Sync error:', error);
-      Alert.alert('Error', 'Failed to sync data: ' + error.message);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
           <TouchableOpacity
-            style={[styles.syncButton, { marginRight: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
-            onPress={handleSync}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sync</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.addButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={() => navigation.navigate('AddPatient')}
           >
-            <Text style={styles.buttonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.logoutButton, { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
+            style={[styles.addButton, styles.logoutButton, { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={async () => {
               const ok = await AuthService.logout();
               if (ok) navigation.replace('Login');
               else Alert.alert('Error', 'Logout failed');
             }}
           >
-            <Text style={styles.buttonText}>Logout</Text>
+            <Text style={styles.addButtonText}>Logout</Text>
           </TouchableOpacity>
         </View>
       ),
     });
-  }, [navigation, syncing]);
+  }, [navigation]);
 
   const load = async () => {
     try {
@@ -231,15 +189,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  syncButton: {
-    backgroundColor: '#27ae60',
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -267,9 +216,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 5,
-  },
-  logoutButton: {
-    backgroundColor: '#e74c3c',
   },
   logoutButtonMain: {
     position: 'absolute',

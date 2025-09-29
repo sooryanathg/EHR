@@ -1,28 +1,49 @@
 import db from './schema';
-import { SyncQueueService } from './syncQueueService';
 import { syncManager } from '../services/syncManager';
 
 export const PatientService = {
   async createPatient(patient) {
-    return db.runAsync(
-      `INSERT INTO patients (name, age, type, village, health_id, language)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        patient.name,
-        patient.age,
-        patient.type,
-        patient.village,
-        patient.health_id || null,
-        patient.language || 'en',
-      ]
-    ).then(async (result) => {
+    // Import SyncQueueService here to avoid circular dependency issues
+    const { SyncQueueService } = require('./syncQueueService');
+
+    try {
+      const result = await db.runAsync(
+        `INSERT INTO patients (name, age, type, village, health_id, language)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          patient.name,
+          patient.age,
+          patient.type,
+          patient.village,
+          patient.health_id || null,
+          patient.language || 'en',
+        ]
+      );
+
       const patientId = result.lastInsertRowId;
-      // Add to sync queue
-      await SyncQueueService.addToSyncQueue('patient', patientId, 'create');
-      // Trigger sync
+
+      // Add to sync queue - pass the full patient payload to avoid race conditions
+      const fullPatient = {
+        id: patientId,
+        name: patient.name,
+        age: patient.age,
+        type: patient.type,
+        village: patient.village,
+        health_id: patient.health_id || null,
+        language: patient.language || 'en',
+        created_at: new Date().toISOString()
+      };
+
+      await SyncQueueService.addToSyncQueue('patient', patientId, 'create', fullPatient);
+
+      // Trigger sync in the background
       syncManager.syncData().catch(console.error);
+
       return patientId;
-    });
+    } catch (error) {
+      console.error('Error in PatientService.createPatient:', error);
+      throw error; // Re-throw the error to be caught by the UI
+    }
   },
 
   getAllPatients() {

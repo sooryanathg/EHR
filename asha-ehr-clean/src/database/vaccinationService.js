@@ -1,6 +1,6 @@
-import db from './schema';
-import { SyncQueueService } from './syncQueueService';
-import { syncManager } from '../services/syncManager';
+import { openDatabaseSync } from 'expo-sqlite';
+
+const db = openDatabaseSync('asha_ehr.db');
 
 export const VaccinationService = {
   async createVaccination(vaccination) {
@@ -15,14 +15,7 @@ export const VaccinationService = {
         vaccination.given_date || null,
         vaccination.status || 'pending'
       ]
-    ).then(async (result) => {
-      const vaccinationId = result.lastInsertRowId;
-      // Add to sync queue
-      await SyncQueueService.addToQueue('vaccinations', vaccinationId, 'create');
-      // Trigger sync
-      syncManager.syncData().catch(console.error);
-      return vaccinationId;
-    });
+    ).then((result) => result.lastInsertRowId);
   },
 
   async getVaccinationsByPatientId(patientId) {
@@ -44,12 +37,7 @@ export const VaccinationService = {
         vaccination.status,
         vaccination.id
       ]
-    ).then(async () => {
-      // Add to sync queue
-      await SyncQueueService.addToQueue('vaccinations', vaccination.id, 'update');
-      // Trigger sync
-      syncManager.syncData().catch(console.error);
-    });
+    );
   },
 
   async getOverdueVaccinations() {

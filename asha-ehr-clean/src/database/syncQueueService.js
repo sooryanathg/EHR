@@ -1,31 +1,30 @@
 import db from './schema';
-import { FirestoreSync } from '../services/firestoreSync';
-
-const getTableName = (recordType) => {
-  // Convert plural to singular if needed
-  const singular = recordType.replace(/s$/, '');
-  return singular + 's';
-};
 
 export const SyncQueueService = {
-  async addToSyncQueue(recordType, recordId, action) {
-    // Get the record data based on type
-    const table = getTableName(recordType);
-    const record = await db.getFirstAsync(
-      `SELECT * FROM ${table} WHERE id = ?`,
-      [recordId]
-    );
+  async addToSyncQueue(recordType, recordId, action, data = null) {
+    // If data is provided directly, use it; otherwise attempt to read from the table
+    let payload = null;
+    if (data) {
+      payload = data;
+    } else {
+      // Normalize table name: callers may pass 'patient' or 'patients'
+      const table = recordType.endsWith('s') ? recordType : `${recordType}s`;
+      payload = await db.getFirstAsync(`SELECT * FROM ${table} WHERE id = ?`, [recordId]);
+    }
+
+    const dataValue = payload ? JSON.stringify(payload) : JSON.stringify({});
+    const statusValue = 'pending';
 
     return db.runAsync(
       `INSERT INTO sync_queue (record_type, record_id, action, data, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-      [recordType, recordId, action, JSON.stringify(record)]
+       VALUES (?, ?, ?, ?, ?)`,
+      [recordType, recordId, action, dataValue, statusValue]
     );
   },
 
   async getPendingSyncItems() {
     return db.getAllAsync(
-      `SELECT * FROM sync_queue ORDER BY id ASC`
+      `SELECT * FROM sync_queue WHERE status IN ('pending','failed') ORDER BY id ASC`
     );
   },
 
@@ -36,48 +35,27 @@ export const SyncQueueService = {
     );
   },
 
-  async markRecordSynced(recordType, recordId, firestoreId) {
-    const table = getTableName(recordType);
-    
-    // Update the record in the main table
-    await db.runAsync(
-      `UPDATE ${table} SET synced = 1, firestore_id = ? WHERE id = ?`,
-      [firestoreId, recordId]
-    );
-    
-    // Update the sync queue status
-    await db.runAsync(
-      `UPDATE sync_queue SET status = 'completed', synced = 1 
-       WHERE record_type = ? AND record_id = ? AND status != 'completed'`,
-      [recordType, recordId]
+  async markRecordSynced(recordType, recordId) {
+    // Normalize recordType: accept 'patient' or 'patients'
+    const table = recordType.endsWith('s') ? recordType : `${recordType}s`;
+    return db.runAsync(
+      `UPDATE ${table} SET synced = 1 WHERE id = ?`,
+      [recordId]
     );
   },
 
   async getUnsynced() {
-    const unsyncedQueue = await db.getAllAsync(
-      `SELECT * FROM sync_queue 
-       WHERE status IN ('pending', 'failed') 
-       ORDER BY created_at ASC`
+    const patients = await db.getAllAsync(
+      `SELECT * FROM patients WHERE synced = 0`
     );
     
-    const patients = [];
-    const visits = [];
-    const vaccinations = [];
+    const visits = await db.getAllAsync(
+      `SELECT * FROM visits WHERE synced = 0`
+    );
     
-    for (const item of unsyncedQueue) {
-      const data = JSON.parse(item.data);
-      switch (item.record_type) {
-        case 'patient':
-          patients.push(data);
-          break;
-        case 'visit':
-          visits.push(data);
-          break;
-        case 'vaccination':
-          vaccinations.push(data);
-          break;
-      }
-    }
+    const vaccinations = await db.getAllAsync(
+      `SELECT * FROM vaccinations WHERE synced = 0`
+    );
     
     return {
       patients,

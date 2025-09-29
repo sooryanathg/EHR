@@ -20,6 +20,7 @@ const NewAddPatientScreen = ({ navigation }) => {
   });
 
   const [selectedType, setSelectedType] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -51,6 +52,7 @@ const NewAddPatientScreen = ({ navigation }) => {
     console.log('Saving form data:', formData);
     if (!validateForm()) return;
 
+    setLoading(true);
     try {
       await PatientService.createPatient({
         name: formData.name.trim(),
@@ -66,7 +68,9 @@ const NewAddPatientScreen = ({ navigation }) => {
       ]);
     } catch (e) {
       console.error('Error saving patient:', e);
-      Alert.alert('Error', 'Failed to save patient');
+      Alert.alert('Error', 'Failed to save patient: ' + e.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,12 +152,12 @@ const NewAddPatientScreen = ({ navigation }) => {
           placeholder="Enter health ID (optional)"
         />
 
-        <TouchableOpacity 
-          style={[styles.saveButton, !selectedType && styles.saveButtonDisabled]}
+        <TouchableOpacity
+          style={[styles.saveButton, loading && styles.disabledButton]}
           onPress={handleSave}
-          disabled={!selectedType}
+          disabled={loading}
         >
-          <Text style={styles.saveButtonText}>Save Patient</Text>
+          <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Patient'}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -167,61 +171,63 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 20,
+    backgroundColor: '#fff',
   },
   label: {
     fontSize: 16,
     marginBottom: 5,
-    color: '#2c3e50',
+    color: '#34495e',
     fontWeight: '600',
   },
   input: {
     backgroundColor: '#fff',
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#bdc3c7',
     borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     marginBottom: 15,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
   },
   typeContainer: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 15,
   },
   typeButton: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
+    flex: 1,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 8,
+    borderColor: '#3498db',
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
   },
   selectedType: {
     backgroundColor: '#3498db',
-    borderColor: '#3498db',
   },
   typeButtonText: {
-    fontSize: 16,
-    color: '#2c3e50',
-    textAlign: 'center',
+    color: '#3498db',
+    fontWeight: '600',
   },
   selectedTypeText: {
     color: '#fff',
-    fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#2ecc71',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
   },
-  saveButtonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
   saveButtonText: {
     color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#95a5a6',
   },
 });
 

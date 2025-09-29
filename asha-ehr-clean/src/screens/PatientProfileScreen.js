@@ -49,8 +49,9 @@ const PatientProfileScreen = ({ navigation, route }) => {
       }
     };
     
-    loadData();
-  }, [route.params?.patientId]);
+    const unsubscribe = navigation.addListener('focus', loadData);
+    return unsubscribe;
+  }, [navigation, route.params?.patientId]);
 
   const renderVisit = (visit) => {
     const date = new Date(visit.date).toLocaleDateString();
