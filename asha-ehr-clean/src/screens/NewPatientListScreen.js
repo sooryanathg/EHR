@@ -1,0 +1,324 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  TextInput,
+  ActivityIndicator
+} from 'react-native';
+import { PatientService } from '../database/patientService';
+
+const NewPatientListScreen = ({ navigation }) => {
+  const [patients, setPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPatients();
+    });
+    loadPatients();
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadPatients = async () => {
+    try {
+      setLoading(true);
+      const data = await PatientService.getAllPatients();
+      setPatients(data);
+      applyFilters(data, activeFilter, searchQuery);
+    } catch (e) {
+      console.error('Error loading patients:', e);
+      Alert.alert('Error', 'Failed to load patients');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = (data, filter, search) => {
+    let result = [...data];
+    
+    // Apply type filter
+    if (filter !== 'all') {
+      result = result.filter(patient => patient.type === filter);
+    }
+
+    // Apply search
+    if (search) {
+      result = result.filter(patient => 
+        patient.name.toLowerCase().includes(search.toLowerCase()) ||
+        patient.village.toLowerCase().includes(search.toLowerCase()) ||
+        (patient.health_id && patient.health_id.toLowerCase().includes(search.toLowerCase()))
+      );
+    }
+
+    setFilteredPatients(result);
+  };
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    applyFilters(patients, activeFilter, text);
+  };
+
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+    applyFilters(patients, filter, searchQuery);
+  };
+
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'pregnant': return 'Pregnant Woman';
+      case 'lactating': return 'Lactating Woman';
+      case 'child': return 'Child';
+      default: return type;
+    }
+  };
+
+  const renderPatientCard = ({ item }) => (
+    <TouchableOpacity
+      style={styles.patientCard}
+      onPress={() => navigation.navigate('PatientProfile', { patientId: item.id })}
+    >
+      <View style={styles.patientInfo}>
+        <Text style={styles.patientName}>{item.name}</Text>
+        <Text style={styles.patientType}>{getTypeLabel(item.type)}</Text>
+        <Text style={styles.patientDetails}>Age: {item.age}</Text>
+        <Text style={styles.patientVillage}>Village: {item.village}</Text>
+        {item.health_id && (
+          <Text style={styles.healthId}>Health ID: {item.health_id}</Text>
+        )}
+      </View>
+      <View style={styles.syncStatus}>
+        <View
+          style={[
+            styles.syncDot,
+            { backgroundColor: item.synced ? '#2ecc71' : '#e74c3c' }
+          ]}
+        />
+        <Text style={styles.syncText}>
+          {item.synced ? 'Synced' : 'Not Synced'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search patients..."
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+        <View style={styles.filterButtons}>
+          <TouchableOpacity
+            style={[styles.filterButton, activeFilter === 'all' && styles.activeFilter]}
+            onPress={() => handleFilterChange('all')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, activeFilter === 'pregnant' && styles.activeFilter]}
+            onPress={() => handleFilterChange('pregnant')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'pregnant' && styles.activeFilterText]}>
+              Pregnant
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, activeFilter === 'lactating' && styles.activeFilter]}
+            onPress={() => handleFilterChange('lactating')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'lactating' && styles.activeFilterText]}>
+              Lactating
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, activeFilter === 'child' && styles.activeFilter]}
+            onPress={() => handleFilterChange('child')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'child' && styles.activeFilterText]}>
+              Children
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
+      ) : (
+        <FlatList
+          data={filteredPatients}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderPatientCard}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery || activeFilter !== 'all' 
+                  ? 'No patients match your search'
+                  : 'No patients added yet'}
+              </Text>
+            </View>
+          )}
+        />
+      )}
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddPatient')}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    marginBottom: 5,
+  },
+  searchInput: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    fontSize: 16,
+    marginHorizontal: 5,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    marginHorizontal: 2,
+  },
+  filterText: {
+    fontSize: 12,
+    color: '#2c3e50',
+  },
+  activeFilter: {
+    backgroundColor: '#3498db',
+  },
+  activeFilterText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  patientCard: {
+    backgroundColor: '#fff',
+    padding: 15,
+    marginHorizontal: 15,
+    marginVertical: 5,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 2,
+  },
+  patientInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  patientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  patientType: {
+    fontSize: 14,
+    color: '#3498db',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  patientDetails: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 2,
+  },
+  patientVillage: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 2,
+  },
+  healthId: {
+    fontSize: 12,
+    color: '#95a5a6',
+  },
+  syncStatus: {
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 5,
+  },
+  syncText: {
+    fontSize: 10,
+    color: '#95a5a6',
+  },
+  fab: {
+    position: 'absolute',
+    right: 25,
+    bottom: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3498db',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  fabText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+  },
+});
+
+export default NewPatientListScreen;

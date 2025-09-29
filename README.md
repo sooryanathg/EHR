@@ -1,53 +1,118 @@
-# ASHA EHR - Community Health Management System
+# ASHA EHR System
 
-A comprehensive Electronic Health Record (EHR) system designed for ASHA (Accredited Social Health Activist) workers and PHC (Primary Health Centre) staff to manage community health data efficiently.
+A comprehensive healthcare management system consisting of two main components:
+1. ASHA-EHR Mobile App - For community health workers (ASHA workers)
+2. PHC Dashboard - For Primary Health Centre staff
 
-## ✅ Project Status
+## Project Structure
 
-**Current Status: READY FOR DEPLOYMENT** 🚀
+```
+EHR/
+├── asha-ehr-clean/          # Mobile app for ASHA workers
+│   ├── src/
+│   │   ├── auth/           # Authentication
+│   │   ├── screens/        # App screens
+│   │   ├── database/       # Local SQLite storage
+│   │   ├── services/       # Business logic
+│   │   └── components/     # Reusable components
+│   └── ...
+│
+└── phc-dashboard/          # Web dashboard for PHC staff
+    ├── src/
+    │   ├── app/           # Next.js app router
+    │   ├── components/    # React components
+    │   └── lib/          # Utilities and services
+    └── ...
+```
 
-### Completed Features
-- ✅ Complete mobile app with all screens and functionality
-- ✅ Full dashboard with analytics and data visualization
-- ✅ Firebase integration for cloud sync
-- ✅ SQLite database for offline storage
-- ✅ Voice notes recording and playback
-- ✅ Push notifications system
-- ✅ Multilingual support (English/Hindi)
-- ✅ Authentication system (PIN for ASHA, Firebase for PHC)
-- ✅ Data synchronization between mobile and web
-- ✅ Build and deployment configurations
+## Features
 
-### Ready for Production
-- All core features implemented and tested
-- Build processes verified
-- Deployment guides provided
-- Security configurations in place
+### Mobile App (ASHA-EHR)
+- 📱 Offline-first data collection
+- 👥 Patient management
+- 🏥 Visit tracking
+- 💉 Vaccination records
+- 🔄 Data synchronization
+- 🔒 Secure authentication
+- 📱 Works offline with SQLite
 
-## 🏗️ Architecture
+### Web Dashboard (PHC)
+- 📊 Data analytics and visualization
+- 👥 Patient data management
+- 📈 Health trends monitoring
+- 🏥 Resource management
+- 🔒 Role-based access control
 
-### Tech Stack
-- **Mobile App**: React Native (Expo)
-- **Local Database**: SQLite (expo-sqlite)
-- **Backend**: Firebase (Firestore + Auth + Storage)
-- **Dashboard**: Next.js (React) with Tailwind CSS
-- **Notifications**: Expo Notifications
-- **Multilingual**: react-i18next (English/Hindi)
-- **Voice Notes**: Expo AV
-- **Security**: AES encryption + PIN authentication
+## Technology Stack
 
-### System Components
-1. **Mobile App (ASHA Workers)**: Offline-first data collection
-2. **Web Dashboard (PHC Staff)**: Data visualization and management
-3. **Firebase Backend**: Cloud sync and storage
-4. **Local SQLite**: Offline data persistence
+### Mobile App (ASHA-EHR)
+- **Framework**: React Native with Expo
+- **Database**: SQLite for offline storage
+- **State Management**: React Context
+- **UI Components**: Native Base
+- **Authentication**: PIN-based system
 
-## 🚀 Quick Start
+### Web Dashboard (PHC)
+- **Framework**: Next.js 13+ (App Router)
+- **UI**: Tailwind CSS
+- **Authentication**: Firebase Auth
+- **Database**: Firestore
+- **Analytics**: Custom charts and metrics
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 16+ 
+- Node.js 16+
 - npm or yarn
-- Expo CLI (`npm install -g @expo/cli`)
+- Expo CLI: `npm install -g expo-cli`
+- Firebase account and configuration
+
+### Running the Mobile App (ASHA-EHR)
+
+1. Navigate to the mobile app directory:
+   ```bash
+   cd asha-ehr-clean
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npx expo start
+   ```
+
+4. Run on Android/iOS:
+   - Press 'a' for Android
+   - Press 'i' for iOS
+   - Scan QR code with Expo Go app
+
+### Running the Web Dashboard (PHC)
+
+1. Navigate to the dashboard directory:
+   ```bash
+   cd phc-dashboard
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   - Copy `.env.example` to `.env.local`
+   - Add your Firebase configuration
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Access the dashboard:
+   - Open http://localhost:3000
+   - Login with authorized PHC credentials
 - Firebase account
 - Android Studio (for Android development)
 - Xcode (for iOS development, macOS only)
