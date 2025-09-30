@@ -7,8 +7,12 @@ import {
   StyleSheet,
   Alert,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
@@ -19,6 +23,9 @@ const NewPatientListScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [showLangModal, setShowLangModal] = useState(false);
+  const [language, setLanguage] = useState(i18n.language || 'en');
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -121,21 +128,31 @@ const NewPatientListScreen = ({ navigation }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.topBar}>
-            <Text style={styles.headerTitle}>Patients</Text>
-            <TouchableOpacity
-              style={styles.logoutBtn}
-              onPress={handleLogout}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Logout"
-            >
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t('patients_title')}</Text>
+            <View style={styles.topBarRight}>
+              <TouchableOpacity
+                style={styles.langButtonHeader}
+                onPress={() => setShowLangModal(true)}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              >
+                <Text style={styles.langTextHeader}>{language === 'hi' ? 'हिं' : language === 'ta' ? 'த' : 'EN'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.logoutBtn}
+                onPress={handleLogout}
+                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Logout"
+              >
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Search patients..."
+            placeholder={t('search_placeholder')}
             value={searchQuery}
             onChangeText={handleSearch}
           />
@@ -145,7 +162,7 @@ const NewPatientListScreen = ({ navigation }) => {
               onPress={() => handleFilterChange('all')}
             >
               <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>
-                All
+                {t('filter_all')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -153,7 +170,7 @@ const NewPatientListScreen = ({ navigation }) => {
               onPress={() => handleFilterChange('pregnant')}
             >
               <Text style={[styles.filterText, activeFilter === 'pregnant' && styles.activeFilterText]}>
-                Pregnant
+                {t('filter_pregnant')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -161,7 +178,7 @@ const NewPatientListScreen = ({ navigation }) => {
               onPress={() => handleFilterChange('lactating')}
             >
               <Text style={[styles.filterText, activeFilter === 'lactating' && styles.activeFilterText]}>
-                Lactating
+                {t('filter_lactating')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -169,7 +186,7 @@ const NewPatientListScreen = ({ navigation }) => {
               onPress={() => handleFilterChange('child')}
             >
               <Text style={[styles.filterText, activeFilter === 'child' && styles.activeFilterText]}>
-                Children
+                {t('filter_child')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -185,9 +202,9 @@ const NewPatientListScreen = ({ navigation }) => {
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>
-                  {searchQuery || activeFilter !== 'all'
-                    ? 'No patients match your search'
-                    : 'No patients added yet'}
+          {searchQuery || activeFilter !== 'all'
+            ? t('no_match_search')
+            : t('no_patients')}
                 </Text>
               </View>
             )}
@@ -202,6 +219,37 @@ const NewPatientListScreen = ({ navigation }) => {
         >
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
+        {/* Language selection modal */}
+        <Modal
+          visible={showLangModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLangModal(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowLangModal(false)}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Language</Text>
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={() => { i18n.changeLanguage('en'); setLanguage('en'); setShowLangModal(false); }}
+              >
+                <Text style={[styles.modalItemText, language === 'en' && styles.modalItemActive]}>English (EN)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={() => { i18n.changeLanguage('hi'); setLanguage('hi'); setShowLangModal(false); }}
+              >
+                <Text style={[styles.modalItemText, language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={() => { i18n.changeLanguage('ta'); setLanguage('ta'); setShowLangModal(false); }}
+              >
+                <Text style={[styles.modalItemText, language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -230,6 +278,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -357,6 +409,48 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  langButtonHeader: {
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  langTextHeader: {
+    color: '#333',
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: 260,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalItem: {
+    paddingVertical: 10,
+  },
+  modalItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  modalItemActive: {
+    color: '#3498db',
+    fontWeight: '700',
   },
   loader: {
     flex: 1,

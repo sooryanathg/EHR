@@ -1,0 +1,27 @@
+{
+  "app_title": "आशा ईएचआर",
+  "add_patient": "मरीज जोड़ें",
+  "add_new_patient": "नया मरीज जोड़ें",
+  "name": "नाम",
+  "age": "आयु",
+  "health_id": "स्वास्थ्य आईडी",
+  "type": "प्रकार",
+  "village": "गांव",
+  "save": "सहेजें",
+  "logout": "लॉगआउट"
+
+  ,"patients_title": "मरीज",
+  "search_placeholder": "मरीज खोजें...",
+  "filter_all": "सभी",
+  "filter_pregnant": "गर्भवती",
+  "filter_lactating": "स्तनपान",
+  "filter_child": "बच्चे",
+  "no_match_search": "कोई मरीज आपकी खोज से मेल नहीं खाते",
+  "no_patients": "अभी तक कोई मरीज नहीं जोड़ा गया",
+  "add_button": "+ जोड़ें",
+  "synced": "सिंक किया गया",
+  "not_synced": "सिंक नहीं हुआ",
+  "patient_type_pregnant": "गर्भवती महिला",
+  "patient_type_lactating": "स्तनपान कराने वाली महिला",
+  "patient_type_child": "बच्चा"
+}

@@ -7,8 +7,12 @@ import {
   StyleSheet,
   Alert,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
 
@@ -16,6 +20,9 @@ const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showLangModal, setShowLangModal] = useState(false);
+  const [language, setLanguage] = useState(i18n.language || 'en');
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -34,8 +41,17 @@ const PatientListScreen = ({ navigation }) => {
             style={[styles.addButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={() => navigation.navigate('AddPatient')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('add_button')}</Text>
           </TouchableOpacity>
+
+          {/* Language button - opens modal with language options */}
+          <TouchableOpacity
+            style={[styles.langButtonHeader, { marginLeft: 8 }]}
+            onPress={() => setShowLangModal(true)}
+          >
+            <Text style={[styles.langTextHeader]}>{language === 'hi' ? 'हिं' : language === 'ta' ? 'த' : 'EN'}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.addButton, styles.logoutButton, { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={async () => {
@@ -49,7 +65,7 @@ const PatientListScreen = ({ navigation }) => {
         </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, language]);
 
   const load = async () => {
     try {
@@ -94,7 +110,7 @@ const PatientListScreen = ({ navigation }) => {
           { backgroundColor: item.synced ? '#27ae60' : '#f39c12' }
         ]} />
         <Text style={styles.syncText}>
-          {item.synced ? 'Synced' : 'Pending'}
+          {item.synced ? t('synced') : t('not_synced')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -112,14 +128,14 @@ const PatientListScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.title}>Patients</Text>
+          <Text style={styles.title}>{t('patients_title')}</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('AddPatient')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <Text style={styles.addButtonText}>{t('add_button')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -147,7 +163,7 @@ const PatientListScreen = ({ navigation }) => {
 
       <View style={styles.searchWrap}>
         <TextInput
-          placeholder="Search by name, village or health ID"
+          placeholder={t('search_placeholder')}
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={load}
@@ -156,9 +172,41 @@ const PatientListScreen = ({ navigation }) => {
         />
       </View>
 
+      {/* Language selection modal */}
+      <Modal
+        visible={showLangModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLangModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLangModal(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Language</Text>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => { i18n.changeLanguage('en'); setLanguage('en'); setShowLangModal(false); }}
+            >
+              <Text style={[styles.modalItemText, language === 'en' && styles.modalItemActive]}>English (EN)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => { i18n.changeLanguage('hi'); setLanguage('hi'); setShowLangModal(false); }}
+            >
+              <Text style={[styles.modalItemText, language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => { i18n.changeLanguage('ta'); setLanguage('ta'); setShowLangModal(false); }}
+            >
+              <Text style={[styles.modalItemText, language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
       {patients.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No patients found.</Text>
+          <Text style={styles.emptyText}>{t('no_patients')}</Text>
           <TouchableOpacity
             style={styles.emptyAddButton}
             onPress={() => navigation.navigate('AddPatient')}
@@ -366,6 +414,49 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     lineHeight: 28,
+  },
+  langButtonHeader: {
+    backgroundColor: '#fff',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  langTextHeader: {
+    color: '#333',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: 260,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalItem: {
+    paddingVertical: 10,
+  },
+  modalItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  modalItemActive: {
+    color: '#3498db',
+    fontWeight: '700',
   },
 });
 

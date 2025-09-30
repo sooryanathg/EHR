@@ -1,0 +1,27 @@
+{
+  "app_title": "ஆஷா EHR",
+  "add_patient": "நோயாளியை சேர்க்கவும்",
+  "add_new_patient": "புதிய நோயாளியை சேர்க்கவும்",
+  "name": "பெயர்",
+  "age": "வயது",
+  "health_id": "சுகாதார ஐடி",
+  "type": "வகை",
+  "village": "கிராமம்",
+  "save": "சேமிக்கவும்",
+  "logout": "வெளியேறு"
+
+  ,"patients_title": "நோயாளிகள்",
+  "search_placeholder": "நோயாளிகளை தேடுக...",
+  "filter_all": "அனைத்து",
+  "filter_pregnant": "கர்ப்பிணி",
+  "filter_lactating": "பால் கொடுக்கும்",
+  "filter_child": "குழந்தைகள்",
+  "no_match_search": "உங்கள் தேடலுடன் பொருந்தும் நோயாளிகள் எதுவும் இல்லை",
+  "no_patients": "இன்னும் எந்த நோயாளிகளும் சேர்க்கப்படவில்லை",
+  "add_button": "+ சேர்",
+  "synced": "இணைந்தது",
+  "not_synced": "இணைக்கப்படவில்லை",
+  "patient_type_pregnant": "கர்ப்பிணி பெண்",
+  "patient_type_lactating": "பால் கொடுக்கும் பெண்",
+  "patient_type_child": "குழந்தை"
+}

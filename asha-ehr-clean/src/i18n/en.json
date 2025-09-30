@@ -1,0 +1,27 @@
+{
+  "app_title": "ASHA EHR",
+  "add_patient": "Add Patient",
+  "add_new_patient": "Add new patient",
+  "name": "Name",
+  "age": "Age",
+  "health_id": "Health ID",
+  "type": "Type",
+  "village": "Village",
+  "save": "Save",
+  "logout": "Logout"
+
+  ,"patients_title": "Patients",
+  "search_placeholder": "Search patients...",
+  "filter_all": "All",
+  "filter_pregnant": "Pregnant",
+  "filter_lactating": "Lactating",
+  "filter_child": "Children",
+  "no_match_search": "No patients match your search",
+  "no_patients": "No patients added yet",
+  "add_button": "+ Add",
+  "synced": "Synced",
+  "not_synced": "Not Synced",
+  "patient_type_pregnant": "Pregnant Woman",
+  "patient_type_lactating": "Lactating Woman",
+  "patient_type_child": "Child"
+}

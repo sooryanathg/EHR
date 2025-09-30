@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PatientService } from '../database/patientService';
 import {
   View,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 
 const NewAddPatientScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -24,19 +26,19 @@ const NewAddPatientScreen = ({ navigation }) => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Please enter patient name');
+      Alert.alert(t('error'), t('enter_name'));
       return false;
     }
     if (!formData.age || isNaN(parseInt(formData.age, 10))) {
-      Alert.alert('Error', 'Please enter valid age');
+      Alert.alert(t('error'), t('enter_age'));
       return false;
     }
     if (!formData.type) {
-      Alert.alert('Error', 'Please select patient type');
+      Alert.alert(t('error'), t('select_type'));
       return false;
     }
     if (!formData.village.trim()) {
-      Alert.alert('Error', 'Please enter village name');
+      Alert.alert(t('error'), t('enter_village'));
       return false;
     }
     return true;
@@ -63,12 +65,12 @@ const NewAddPatientScreen = ({ navigation }) => {
         language: 'en',
       });
 
-      Alert.alert('Success', 'Patient added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('success'), t('patient_added'), [
+        { text: t('ok'), onPress: () => navigation.goBack() }
       ]);
     } catch (e) {
       console.error('Error saving patient:', e);
-      Alert.alert('Error', 'Failed to save patient: ' + e.message);
+      Alert.alert(t('error'), t('failed_save') + ': ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -77,79 +79,67 @@ const NewAddPatientScreen = ({ navigation }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.form}>
-        <Text style={styles.label}>Patient Name *</Text>
+        <Text style={styles.label}>{t('name')} *</Text>
         <TextInput
           style={styles.input}
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-          placeholder="Enter patient name"
+          placeholder={t('name')}
         />
 
-        <Text style={styles.label}>Age *</Text>
+        <Text style={styles.label}>{t('age')} *</Text>
         <TextInput
           style={styles.input}
           value={formData.age}
           onChangeText={(text) => setFormData(prev => ({ ...prev, age: text }))}
-          placeholder="Enter age"
+          placeholder={t('age')}
           keyboardType="numeric"
         />
 
-        <Text style={styles.label}>Patient Type *</Text>
+        <Text style={styles.label}>{t('type')} *</Text>
         <View style={styles.typeContainer}>
           <TouchableOpacity
-            style={[
-              styles.typeButton,
-              selectedType === 'pregnant' && styles.selectedType
-            ]}
+            style={[styles.typeButton, selectedType === 'pregnant' && styles.selectedType]}
             onPress={() => handleTypeSelect('pregnant')}
           >
-            <Text style={[
-              styles.typeButtonText,
-              selectedType === 'pregnant' && styles.selectedTypeText
-            ]}>Pregnant Woman</Text>
+            <Text style={[styles.typeButtonText, selectedType === 'pregnant' && styles.selectedTypeText]}>
+              {t('pregnant')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.typeButton,
-              selectedType === 'lactating' && styles.selectedType
-            ]}
+            style={[styles.typeButton, selectedType === 'lactating' && styles.selectedType]}
             onPress={() => handleTypeSelect('lactating')}
           >
-            <Text style={[
-              styles.typeButtonText,
-              selectedType === 'lactating' && styles.selectedTypeText
-            ]}>Lactating Woman</Text>
+            <Text style={[styles.typeButtonText, selectedType === 'lactating' && styles.selectedTypeText]}>
+              {t('lactating')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.typeButton,
-              selectedType === 'child' && styles.selectedType
-            ]}
+            style={[styles.typeButton, selectedType === 'child' && styles.selectedType]}
             onPress={() => handleTypeSelect('child')}
           >
-            <Text style={[
-              styles.typeButtonText,
-              selectedType === 'child' && styles.selectedTypeText
-            ]}>Child</Text>
+            <Text style={[styles.typeButtonText, selectedType === 'child' && styles.selectedTypeText]}>
+              {t('child')}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Village *</Text>
+        <Text style={styles.label}>{t('village')} *</Text>
         <TextInput
           style={styles.input}
           value={formData.village}
           onChangeText={(text) => setFormData(prev => ({ ...prev, village: text }))}
-          placeholder="Enter village name"
+          placeholder={t('village')}
         />
 
-        <Text style={styles.label}>Health ID</Text>
+        <Text style={styles.label}>{t('health_id')}</Text>
         <TextInput
           style={styles.input}
           value={formData.health_id}
           onChangeText={(text) => setFormData(prev => ({ ...prev, health_id: text }))}
-          placeholder="Enter health ID (optional)"
+          placeholder={t('health_id') + ' (' + t('optional') + ')'}
         />
 
         <TouchableOpacity
@@ -157,7 +147,7 @@ const NewAddPatientScreen = ({ navigation }) => {
           onPress={handleSave}
           disabled={loading}
         >
-          <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Patient'}</Text>
+          <Text style={styles.saveButtonText}>{loading ? t('saving') : t('save')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -185,8 +175,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#bdc3c7',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     marginBottom: 15,
     fontSize: 16,
   },
