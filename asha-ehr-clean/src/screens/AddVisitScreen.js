@@ -38,7 +38,7 @@ const AddVisitScreen = ({ navigation, route }) => {
         weight: formData.weight ? parseFloat(formData.weight) : null
       };
 
-      await VisitService.createVisit(visitData);
+  await VisitService.createAndQueueVisit(visitData);
       navigation.goBack();
       Alert.alert(t('success'), t('visit_added_success'));
     } catch (error) {

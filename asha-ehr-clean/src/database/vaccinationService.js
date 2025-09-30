@@ -18,6 +18,28 @@ export const VaccinationService = {
     ).then((result) => result.lastInsertRowId);
   },
 
+  async createAndQueueVaccination(vaccination) {
+    const { SyncQueueService } = require('./syncQueueService');
+    const { syncManager } = require('../services/syncManager');
+
+    const id = await this.createVaccination(vaccination);
+
+    const fullVaccination = {
+      id,
+      patient_id: vaccination.patient_id,
+      vaccine_name: vaccination.vaccine_name,
+      due_date: vaccination.due_date,
+      given_date: vaccination.given_date || null,
+      status: vaccination.status || 'pending',
+      created_at: new Date().toISOString(),
+    };
+
+    await SyncQueueService.addToSyncQueue('vaccination', id, 'create', fullVaccination);
+    syncManager.syncData().catch(console.error);
+
+    return id;
+  },
+
   async getVaccinationsByPatientId(patientId) {
     return db.getAllAsync(
       `SELECT * FROM vaccinations 
@@ -38,6 +60,26 @@ export const VaccinationService = {
         vaccination.id
       ]
     );
+  },
+
+  async updateAndQueueVaccination(vaccination) {
+    const { SyncQueueService } = require('./syncQueueService');
+    const { syncManager } = require('../services/syncManager');
+
+    await this.updateVaccination(vaccination);
+
+    const fullVaccination = {
+      id: vaccination.id,
+      patient_id: vaccination.patient_id,
+      vaccine_name: vaccination.vaccine_name,
+      due_date: vaccination.due_date,
+      given_date: vaccination.given_date || null,
+      status: vaccination.status || 'pending',
+      updated_at: new Date().toISOString(),
+    };
+
+    await SyncQueueService.addToSyncQueue('vaccination', vaccination.id, 'update', fullVaccination);
+    syncManager.syncData().catch(console.error);
   },
 
   async getOverdueVaccinations() {

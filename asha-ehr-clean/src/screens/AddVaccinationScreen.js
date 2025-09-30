@@ -33,7 +33,7 @@ const AddVaccinationScreen = ({ route, navigation }) => {
         status: 'given'
       };
 
-      await VaccinationService.createVaccination(vaccination);
+  await VaccinationService.createAndQueueVaccination(vaccination);
       Alert.alert(t('success'), t('vaccination_added_success'));
       navigation.goBack();
     } catch (error) {
