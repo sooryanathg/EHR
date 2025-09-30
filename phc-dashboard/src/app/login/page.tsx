@@ -158,16 +158,12 @@ export default function Login() {
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-600">
-```
-              Demo credentials: admin@phc.com / password123
+              Demo credentials: admin@phc.com / admin123
             </p>
           </div>
         </form>
       </div>
     </div>
   );
-}
-function setUserRole(arg0: string) {
-  throw new Error('Function not implemented.');
 }
 

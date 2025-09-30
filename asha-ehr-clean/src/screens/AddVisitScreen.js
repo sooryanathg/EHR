@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView
+  ScrollView,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { VisitService } from '../database/visitService';
 import { useTranslation } from 'react-i18next';
 
@@ -24,6 +26,8 @@ const AddVisitScreen = ({ navigation, route }) => {
     notes: '',
     next_visit: ''
   });
+  const [showVisitPicker, setShowVisitPicker] = useState(false);
+  const [showNextVisitPicker, setShowNextVisitPicker] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -32,7 +36,8 @@ const AddVisitScreen = ({ navigation, route }) => {
       const visitData = {
         ...formData,
         patient_id: patient.id,
-        date: new Date().toISOString().split('T')[0],
+        // use the date the user provided (visited/recorded date)
+        date: formData.date || new Date().toISOString().split('T')[0],
         bp_systolic: formData.bp_systolic ? parseInt(formData.bp_systolic) : null,
         bp_diastolic: formData.bp_diastolic ? parseInt(formData.bp_diastolic) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null
@@ -46,6 +51,32 @@ const AddVisitScreen = ({ navigation, route }) => {
       Alert.alert(t('error'), t('visit_add_error'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const formatDate = (d) => {
+    if (!d) return '';
+    const year = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${year}-${mm}-${dd}`;
+  };
+
+  const openVisitPicker = () => setShowVisitPicker(true);
+  const openNextVisitPicker = () => setShowNextVisitPicker(true);
+
+  const onVisitChange = (event, selectedDate) => {
+    // On Android the picker may be dismissed (selectedDate undefined)
+    setShowVisitPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setFormData(prev => ({ ...prev, date: formatDate(selectedDate) }));
+    }
+  };
+
+  const onNextVisitChange = (event, selectedDate) => {
+    setShowNextVisitPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setFormData(prev => ({ ...prev, next_visit: formatDate(selectedDate) }));
     }
   };
 
@@ -81,6 +112,19 @@ const AddVisitScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('visit_date')}</Text>
+          <TouchableOpacity style={styles.input} onPress={openVisitPicker}>
+            <Text style={{ color: formData.date ? '#2c3e50' : '#7f8c8d' }}>{formData.date || 'YYYY-MM-DD'}</Text>
+          </TouchableOpacity>
+          {showVisitPicker && (
+            <DateTimePicker
+              value={new Date(formData.date || new Date().toISOString().split('T')[0])}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+              onChange={onVisitChange}
+            />
+          )}
+
           <Text style={styles.label}>{t('blood_pressure')}</Text>
           <View style={styles.bpContainer}>
             <View style={styles.bpInput}>
@@ -131,12 +175,17 @@ const AddVisitScreen = ({ navigation, route }) => {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>{t('next_visit_date')}</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.next_visit}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, next_visit: value }))}
-            placeholder="YYYY-MM-DD"
-          />
+          <TouchableOpacity style={styles.input} onPress={openNextVisitPicker}>
+            <Text style={{ color: formData.next_visit ? '#2c3e50' : '#7f8c8d' }}>{formData.next_visit || 'YYYY-MM-DD'}</Text>
+          </TouchableOpacity>
+          {showNextVisitPicker && (
+            <DateTimePicker
+              value={formData.next_visit ? new Date(formData.next_visit) : new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+              onChange={onNextVisitChange}
+            />
+          )}
         </View>
 
         <View style={styles.buttonContainer}>

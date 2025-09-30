@@ -30,6 +30,7 @@
   "visit_type_general": "General",
   "visit_type_anc": "ANC",
   "visit_type_immunization": "Immunization",
+  "visit_date": "Visit Date",
   "blood_pressure": "Blood Pressure",
   "systolic": "Systolic",
   "diastolic": "Diastolic",
@@ -75,4 +76,10 @@
   "next_visit_label": "Next Visit:",
   "due_label": "Due:",
   "given_label": "Given:"
+  ,
+  "reminders": "Reminders",
+  "upcoming_visits": "Upcoming Visits",
+  "no_upcoming_visits": "No upcoming visits",
+  "upcoming_vaccinations": "Upcoming Vaccinations",
+  "no_upcoming_vaccinations": "No upcoming vaccinations"
 }

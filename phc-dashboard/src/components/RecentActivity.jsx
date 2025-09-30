@@ -21,20 +21,22 @@ const RecentActivity = () => {
       
       const visitsData = visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Get patient names for visits
-      const activitiesWithNames = await Promise.all(
-        visitsData.map(async (visit) => {
-          const patientSnapshot = await getDocs(
-            query(collection(db, 'patients'), where('local_id', '==', visit.patient_id))
-          );
-          const patient = patientSnapshot.docs[0]?.data();
-          return {
-            ...visit,
-            patient_name: patient?.name || 'Unknown Patient',
-            patient_village: patient?.village || 'Unknown Village'
-          };
-        })
-      );
+      // Fetch all patients once and build a map to avoid N+1 queries
+      const patientsSnapshot = await getDocs(query(collection(db, 'patients')));
+      const patientMap = new Map();
+      patientsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data?.local_id) patientMap.set(data.local_id, data);
+      });
+
+      const activitiesWithNames = visitsData.map((visit) => {
+        const patient = patientMap.get(visit.patient_id);
+        return {
+          ...visit,
+          patient_name: patient?.name || 'Unknown Patient',
+          patient_village: patient?.village || 'Unknown Village'
+        };
+      });
 
       setActivities(activitiesWithNames);
     } catch (error) {

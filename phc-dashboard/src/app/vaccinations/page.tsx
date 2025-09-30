@@ -26,21 +26,23 @@ export default function Vaccinations() {
         ...doc.data() 
       }));
       
-      // Get patient names for vaccinations
-      const vaccinationsWithNames = await Promise.all(
-        vaccinationsData.map(async (vaccination: any) => {
-          const patientSnapshot = await getDocs(
-            query(collection(db, 'patients'), where('local_id', '==', vaccination.patient_id))
-          );
-          const patient = patientSnapshot.docs[0]?.data();
-          return {
-            ...vaccination,
-            patient_name: patient?.name || 'Unknown Patient',
-            patient_village: patient?.village || 'Unknown Village'
-          };
-        })
-      );
-      
+      // Fetch all patients once and build a map to avoid N+1 queries
+      const patientsSnapshot = await getDocs(query(collection(db, 'patients')));
+      const patientMap = new Map<string, any>();
+      patientsSnapshot.docs.forEach(doc => {
+        const data = doc.data() as any;
+        if (data?.local_id) patientMap.set(data.local_id, data);
+      });
+
+      const vaccinationsWithNames = vaccinationsData.map((vaccination: any) => {
+        const patient = patientMap.get(vaccination.patient_id);
+        return {
+          ...vaccination,
+          patient_name: patient?.name || 'Unknown Patient',
+          patient_village: patient?.village || 'Unknown Village'
+        };
+      });
+
       setVaccinations(vaccinationsWithNames);
     } catch (error) {
       console.error('Error loading vaccinations:', error);

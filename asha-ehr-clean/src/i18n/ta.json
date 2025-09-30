@@ -30,6 +30,7 @@
   "visit_type_general": "பொதுவான",
   "visit_type_anc": "ANC",
   "visit_type_immunization": "மயிர்கூலி",
+  "visit_date": "பரிசோதனை தேதி",
   "blood_pressure": "இரத்த அழுத்தம்",
   "systolic": "சிஸ்டோலிக்",
   "diastolic": "தியானோலிக்",
@@ -75,4 +76,10 @@
   "next_visit_label": "அடுத்த பார்வை:",
   "due_label": "காலம்:",
   "given_label": "கொடுக்கப்பட்டது:"
+  ,
+  "reminders": "எச்சரிவுகள்",
+  "upcoming_visits": "வரவிருக்கும் பார்வைகள்",
+  "no_upcoming_visits": "வரவிருக்கும் பார்வைகள் இல்லை",
+  "upcoming_vaccinations": "வரவிருக்கும் தடுப்பூசிகள்",
+  "no_upcoming_vaccinations": "வரவிருக்கும் தடுப்பூசிகள் இல்லை"
 }

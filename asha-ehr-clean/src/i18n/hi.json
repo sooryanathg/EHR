@@ -30,6 +30,7 @@
   "visit_type_general": "सामान्य",
   "visit_type_anc": "एएनसी",
   "visit_type_immunization": "टीकाकरण",
+  "visit_date": "दौरे की तिथि",
   "blood_pressure": "रक्तचाप",
   "systolic": "सिस्टोलिक",
   "diastolic": "डायस्टोलिक",
@@ -75,4 +76,10 @@
   "next_visit_label": "अगला दौरा:",
   "due_label": "नियत:",
   "given_label": "दिया गया:"
+  ,
+  "reminders": "अनुस्मारक",
+  "upcoming_visits": "आगामी यात्रा",
+  "no_upcoming_visits": "कोई आगामी यात्रा नहीं",
+  "upcoming_vaccinations": "आगामी टीकाकरण",
+  "no_upcoming_vaccinations": "कोई आगामी टीकाकरण नहीं"
 }

@@ -26,21 +26,23 @@ export default function Visits() {
         ...doc.data() 
       }));
       
-      // Get patient names for visits
-      const visitsWithNames = await Promise.all(
-        visitsData.map(async (visit: any) => {
-          const patientSnapshot = await getDocs(
-            query(collection(db, 'patients'), where('local_id', '==', visit.patient_id))
-          );
-          const patient = patientSnapshot.docs[0]?.data();
-          return {
-            ...visit,
-            patient_name: patient?.name || 'Unknown Patient',
-            patient_village: patient?.village || 'Unknown Village'
-          };
-        })
-      );
-      
+      // Fetch all patients once and build a map to avoid N+1 queries
+      const patientsSnapshot = await getDocs(query(collection(db, 'patients')));
+      const patientMap = new Map<string, any>();
+      patientsSnapshot.docs.forEach(doc => {
+        const data = doc.data() as any;
+        if (data?.local_id) patientMap.set(data.local_id, data);
+      });
+
+      const visitsWithNames = visitsData.map((visit: any) => {
+        const patient = patientMap.get(visit.patient_id);
+        return {
+          ...visit,
+          patient_name: patient?.name || 'Unknown Patient',
+          patient_village: patient?.village || 'Unknown Village'
+        };
+      });
+
       setVisits(visitsWithNames);
     } catch (error) {
       console.error('Error loading visits:', error);

@@ -17,6 +17,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isPinSet, setIsPinSet] = useState(false);
@@ -77,7 +78,7 @@ const LoginScreen = ({ navigation }) => {
     }
 
     try {
-      await AuthService.registerASHA(email, password);
+      await AuthService.registerASHA(email, password, name);
       Alert.alert('Success', 'Registration complete');
       navigation.replace('PatientList');
     } catch (error) {
@@ -107,6 +108,18 @@ const LoginScreen = ({ navigation }) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
+
+          {isRegistering && (
+            <>
+              <Text style={styles.label}>Full name</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="ASHA name"
+              />
+            </>
+          )}
 
           <Text style={styles.label}>Password</Text>
           <TextInput

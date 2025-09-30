@@ -7,7 +7,9 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { VaccinationService } from '../database/vaccinationService';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +19,10 @@ const AddVaccinationScreen = ({ route, navigation }) => {
   const [vaccineName, setVaccineName] = useState('');
   const [vaccineBatch, setVaccineBatch] = useState('');
   const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [givenDate, setGivenDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showDuePicker, setShowDuePicker] = useState(false);
+  const [showGivenPicker, setShowGivenPicker] = useState(false);
 
   const handleAddVaccination = async () => {
     if (!vaccineName.trim()) {
@@ -28,8 +34,8 @@ const AddVaccinationScreen = ({ route, navigation }) => {
       const vaccination = {
         patient_id: patient.id,
         vaccine_name: vaccineName.trim(),
-        due_date: new Date().toISOString().split('T')[0],
-        given_date: new Date().toISOString().split('T')[0],
+        due_date: dueDate,
+        given_date: givenDate,
         status: 'given'
       };
 
@@ -60,6 +66,48 @@ const AddVaccinationScreen = ({ route, navigation }) => {
           onChangeText={setVaccineBatch}
           placeholder={t('enter_batch_number')}
         />
+
+        <Text style={styles.label}>{t('due_label')}</Text>
+        <TouchableOpacity style={styles.input} onPress={() => setShowDuePicker(true)}>
+          <Text style={{ color: dueDate ? '#2c3e50' : '#7f8c8d' }}>{dueDate || 'YYYY-MM-DD'}</Text>
+        </TouchableOpacity>
+        {showDuePicker && (
+          <DateTimePicker
+            value={new Date(dueDate)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+            onChange={(e, selected) => {
+              setShowDuePicker(Platform.OS === 'ios');
+              if (selected) {
+                const y = selected.getFullYear();
+                const m = String(selected.getMonth() + 1).padStart(2, '0');
+                const d = String(selected.getDate()).padStart(2, '0');
+                setDueDate(`${y}-${m}-${d}`);
+              }
+            }}
+          />
+        )}
+
+        <Text style={styles.label}>{t('given_label')}</Text>
+        <TouchableOpacity style={styles.input} onPress={() => setShowGivenPicker(true)}>
+          <Text style={{ color: givenDate ? '#2c3e50' : '#7f8c8d' }}>{givenDate || 'YYYY-MM-DD'}</Text>
+        </TouchableOpacity>
+        {showGivenPicker && (
+          <DateTimePicker
+            value={new Date(givenDate)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+            onChange={(e, selected) => {
+              setShowGivenPicker(Platform.OS === 'ios');
+              if (selected) {
+                const y = selected.getFullYear();
+                const m = String(selected.getMonth() + 1).padStart(2, '0');
+                const d = String(selected.getDate()).padStart(2, '0');
+                setGivenDate(`${y}-${m}-${d}`);
+              }
+            }}
+          />
+        )}
 
         <Text style={styles.label}>{t('notes')}</Text>
         <TextInput

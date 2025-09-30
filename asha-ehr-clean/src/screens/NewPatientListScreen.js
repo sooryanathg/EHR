@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,20 @@ const NewPatientListScreen = ({ navigation }) => {
     loadPatients();
     return unsubscribe;
   }, [navigation]);
+
+  // add header button to navigate to Reminders
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Reminders')}
+          style={{ marginRight: 12, padding: 6 }}
+        >
+          <Text style={{ color: '#3498db', fontWeight: '700' }}>{t('reminders')}</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, t]);
 
   const loadPatients = async () => {
     try {
@@ -136,6 +150,14 @@ const NewPatientListScreen = ({ navigation }) => {
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               >
                 <Text style={styles.langTextHeader}>{i18n.language === 'hi' ? '\u0939\u093f\u0902' : i18n.language === 'ta' ? '\u0ba4' : i18n.language === 'ml' ? '\u0d2e' : 'EN'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.langButtonHeader, { marginRight: 8 }]}
+                onPress={() => navigation.navigate('Reminders')}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              >
+                <Text style={[styles.langTextHeader, { color: '#3498db' }]}>{t('reminders')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

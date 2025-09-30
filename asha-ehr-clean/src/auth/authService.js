@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 const PIN_KEY = 'asha_pin';
 const USER_ROLE_KEY = 'user_role';
@@ -27,13 +28,27 @@ export const AuthService = {
   },
 
   // Register ASHA using email/password in Firebase
-  registerASHA: async (email, password) => {
+  // Accept optional name to create a users/{uid} profile in Firestore
+  registerASHA: async (email, password, name = '') => {
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
       // persist firebase uid for sync
       if (userCred && userCred.user && userCred.user.uid) {
-        await AsyncStorage.setItem('firebase_uid', userCred.user.uid);
+        const uid = userCred.user.uid;
+        await AsyncStorage.setItem('firebase_uid', uid);
+
+        // Create a basic user profile document so PHC can show names
+        try {
+          await setDoc(doc(db, 'users', uid), {
+            name: name || '',
+            email: email || '',
+            role: 'asha',
+            created_at: new Date().toISOString()
+          });
+        } catch (profileErr) {
+          console.warn('Failed to write ASHA profile to users collection:', profileErr);
+        }
       }
       return userCred.user;
     } catch (error) {

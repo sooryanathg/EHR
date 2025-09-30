@@ -30,6 +30,7 @@
   "visit_type_general": "ജനറൽ",
   "visit_type_anc": "ഗർഭനിരീക്ഷണം (ANC)",
   "visit_type_immunization": "പ്രതിരോധനം",
+  "visit_date": "സന്ദർശന തീയതി",
   "blood_pressure": "രക്തസമ്മർദ്ദം",
   "systolic": "സിസ്റ്റോളിക്ക്",
   "diastolic": "ഡയസ്റ്റോളിക്ക്",
@@ -75,4 +76,10 @@
   "next_visit_label": "അടുത്ത സന്ദർശനം:",
   "due_label": "നിയുക്ത ദിവസം:",
   "given_label": "നൽകിയ തീയതി:" 
+  ,
+  "reminders": "റിമൈണ്ടറുകൾ",
+  "upcoming_visits": "ആവശ്യമായി വരുന്ന സന്ദർശനങ്ങൾ",
+  "no_upcoming_visits": "വരാനിരിക്കുന്ന സന്ദർശനങ്ങളൊന്നുമില്ല",
+  "upcoming_vaccinations": "വരാനിരിക്കുന്ന വാക്സിനേഷൻ",
+  "no_upcoming_vaccinations": "വരാനിരിക്കുന്ന വാക്സിനേഷൻ ഒന്നുമില്ല"
 }

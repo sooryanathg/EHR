@@ -22,8 +22,7 @@ const DashboardLayout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: '📊' },
     { name: 'Patients', href: '/patients', icon: '👥' },
-    { name: 'Visits', href: '/visits', icon: '🏥' },
-    { name: 'Vaccinations', href: '/vaccinations', icon: '💉' },
+    { name: 'ASHAs', href: '/ashas', icon: '👩‍⚕️' },
     { name: 'Analytics', href: '/analytics', icon: '📈' },
   ];
 

@@ -16,6 +16,7 @@ import AddPatientScreen from './src/screens/NewAddPatientScreen';
 import PatientProfileScreen from './src/screens/PatientProfileScreen';
 import AddVisitScreen from './src/screens/AddVisitScreen';
 import AddVaccinationScreen from './src/screens/AddVaccinationScreen';
+import RemindersScreen from './src/screens/RemindersScreen';
 import NetInfo from '@react-native-community/netinfo';
 import { syncManager } from './src/services/syncManager';
 
@@ -123,6 +124,7 @@ export default function App() {
               <Stack.Screen name="PatientProfile" component={PatientProfileScreen} />
               <Stack.Screen name="AddVisit" component={AddVisitScreen} />
               <Stack.Screen name="AddVaccination" component={AddVaccinationScreen} />
+              <Stack.Screen name="Reminders" component={RemindersScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </View>

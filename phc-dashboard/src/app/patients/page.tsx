@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, where, limit, startAfter } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import DashboardLayout from '../../components/DashboardLayout';
 
@@ -9,49 +9,20 @@ export default function Patients() {
   const [patients, setPatients] = useState([] as any[]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     loadPatients();
-  }, [page, searchTerm]);
+  }, []);
 
   const loadPatients = async () => {
     try {
       setLoading(true);
-      let q = query(
-        collection(db, 'patients'),
-        orderBy('created_at', 'desc')
-      );
-
-      // Add search filter if searchTerm exists
-      if (searchTerm) {
-        q = query(
-          collection(db, 'patients'),
-          orderBy('name'),
-          orderBy('created_at', 'desc'),
-          where('name', '>=', searchTerm),
-          where('name', '<=', searchTerm + '\uf8ff'),
-          limit(ITEMS_PER_PAGE)
-        );
-      } else {
-        q = query(
-          collection(db, 'patients'),
-          orderBy('created_at', 'desc'),
-          limit(ITEMS_PER_PAGE),
-          startAfter((page - 1) * ITEMS_PER_PAGE)
-        );
-      }
-      
-      const patientsSnapshot = await getDocs(q);
+      const patientsSnapshot = await getDocs(query(collection(db, 'patients'), orderBy('created_at', 'desc')));
       const patientsData = patientsSnapshot.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data() 
       }));
-      
-      setHasMore(patientsData.length === ITEMS_PER_PAGE);
-      setPatients(prev => page === 1 ? patientsData : [...prev, ...patientsData]);
+      setPatients(patientsData);
     } catch (error) {
       console.error('Error loading patients:', error);
     } finally {
@@ -105,7 +76,6 @@ export default function Patients() {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setPage(1); // Reset to first page on search
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
