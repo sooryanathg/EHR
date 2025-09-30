@@ -1,47 +1,67 @@
 # ASHA EHR System
 
-A comprehensive healthcare management system consisting of two main components:
+A comprehensive healthcare management system designed for rural India, consisting of two main components:
 1. ASHA-EHR Mobile App - For community health workers (ASHA workers)
 2. PHC Dashboard - For Primary Health Centre staff
+
+## Key Features
+
+### For ASHA Workers (Mobile App)
+- 📱 Work offline with full functionality
+- 👥 Register and manage patients with ease
+- 🏥 Record visits with structured data
+- 💉 Track vaccinations and schedule follow-ups
+- 🌐 Automatic background sync when online
+- 🗣️ Multilingual support (English, Hindi, Tamil)
+
+### For PHC Staff (Web Dashboard)
+- 📊 Real-time analytics and insights
+- 🎯 Track ASHA worker performance
+- 📈 Monitor health trends by village
+- 🗺️ Geographic distribution of patients
+- 📱 Mobile-responsive design
+- 🔐 Role-based access control
 
 ## Project Structure
 
 ```
 EHR/
-├── asha-ehr-clean/          # Mobile app for ASHA workers
+├── asha-ehr-clean/          # Mobile app (React Native + Expo)
 │   ├── src/
-│   │   ├── auth/           # Authentication
-│   │   ├── screens/        # App screens
-│   │   ├── database/       # Local SQLite storage
+│   │   ├── auth/           # Authentication & security
+│   │   ├── screens/        # App UI screens
+│   │   ├── database/       # Local SQLite + sync logic
 │   │   ├── services/       # Business logic
-│   │   └── components/     # Reusable components
+│   │   ├── i18n/          # Translations (en, hi, ta)
+│   │   └── lib/           # Utilities
 │   └── ...
 │
-└── phc-dashboard/          # Web dashboard for PHC staff
+└── phc-dashboard/          # Web dashboard (Next.js 13+)
     ├── src/
-    │   ├── app/           # Next.js app router
+    │   ├── app/           # Next.js app router pages
     │   ├── components/    # React components
-    │   └── lib/          # Utilities and services
+    │   └── lib/          # Firebase & utilities
     └── ...
 ```
 
-## Features
+## Technology Stack
 
 ### Mobile App (ASHA-EHR)
-- 📱 Offline-first data collection
-- 👥 Patient management
-- 🏥 Visit tracking
-- 💉 Vaccination records
-- 🔄 Data synchronization
-- 🔒 Secure authentication
-- 📱 Works offline with SQLite
+- **Platform**: React Native with Expo
+- **Storage**: SQLite for offline data
+- **State**: React Context + Hooks
+- **UI**: Custom components with native look
+- **Security**: PIN-based auth + data encryption
+- **Network**: Automatic background sync
+- **Language**: JavaScript
 
 ### Web Dashboard (PHC)
-- 📊 Data analytics and visualization
-- 👥 Patient data management
-- 📈 Health trends monitoring
-- 🏥 Resource management
-- 🔒 Role-based access control
+- **Framework**: Next.js 13+ (App Router)
+- **Database**: Firebase Firestore
+- **Auth**: Firebase Authentication
+- **UI**: Tailwind CSS
+- **Charts**: Modern interactive visualizations
+- **Language**: TypeScript
 
 ## Technology Stack
 
@@ -59,138 +79,81 @@ EHR/
 - **Database**: Firestore
 - **Analytics**: Custom charts and metrics
 
-## Getting Started
+## Quick Start Guide
 
 ### Prerequisites
 - Node.js 16+
 - npm or yarn
-- Expo CLI: `npm install -g expo-cli`
-- Firebase account and configuration
-
-### Running the Mobile App (ASHA-EHR)
-
-1. Navigate to the mobile app directory:
-   ```bash
-   cd asha-ehr-clean
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npx expo start
-   ```
-
-4. Run on Android/iOS:
-   - Press 'a' for Android
-   - Press 'i' for iOS
-   - Scan QR code with Expo Go app
-
-### Running the Web Dashboard (PHC)
-
-1. Navigate to the dashboard directory:
-   ```bash
-   cd phc-dashboard
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables:
-   - Copy `.env.example` to `.env.local`
-   - Add your Firebase configuration
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Access the dashboard:
-   - Open http://localhost:3000
-   - Login with authorized PHC credentials
 - Firebase account
-- Android Studio (for Android development)
-- Xcode (for iOS development, macOS only)
+- Expo CLI (for mobile app)
 
-### 1. Clone and Setup
+### 1. First-Time Setup
 
 **Option A: Automated Setup (Recommended)**
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Clone and setup
+git clone https://github.com/sooryanathg/EHR.git
 cd EHR
 
 # Run quick start script
+# On Windows:
+quick-start.bat
+
 # On Linux/Mac:
 chmod +x quick-start.sh
 ./quick-start.sh
-
-# On Windows:
-quick-start.bat
 ```
 
 **Option B: Manual Setup**
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Clone repository
+git clone https://github.com/sooryanathg/EHR.git
 cd EHR
 
-# Install mobile app dependencies
-cd asha-ehr
+# Setup mobile app
+cd asha-ehr-clean
 npm install
 
-# Install dashboard dependencies
+# Setup dashboard
 cd ../phc-dashboard
 npm install
 ```
 
-### 2. Firebase Configuration
+### 2. Configure Firebase
 
-#### Create Firebase Project
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project
-3. Enable Firestore Database
-4. Enable Authentication (Email/Password)
-5. Enable Storage
-6. Get your Firebase config
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable required services:
+   - Authentication (Email/Password)
+   - Firestore Database
+   - Storage (for attachments)
+3. Get your Firebase config
+4. Set up environment files:
 
-#### Update Firebase Config
-Replace the placeholder config in these files:
-
-**Mobile App (`asha-ehr/src/auth/authService.js`):**
-```javascript
-const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
-};
+**For Mobile App (`asha-ehr-clean/.env`):**
+```
+FIREBASE_API_KEY=your-api-key
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+FIREBASE_MSG_SENDER_ID=123456789
+FIREBASE_APP_ID=your-app-id
 ```
 
-**Dashboard (`phc-dashboard/src/lib/firebase.js`):**
-```javascript
-const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
-};
+**For Dashboard (`phc-dashboard/.env.local`):**
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MSG_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 ```
 
-### 3. Run the Applications
+### 3. Run Development Environment
 
-#### Mobile App (ASHA EHR)
+#### Mobile App
 ```bash
-cd asha-ehr
+cd asha-ehr-clean
 
 # Start Expo development server
 npx expo start
@@ -200,102 +163,107 @@ npx expo run:android
 
 # Run on iOS (macOS only)
 npx expo run:ios
-
-# Run on web (for testing)
-npx expo start --web
 ```
 
-#### PHC Dashboard
+#### Web Dashboard
 ```bash
 cd phc-dashboard
 
 # Start development server
 npm run dev
 
-# Open http://localhost:3000
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-## 📱 Mobile App Features
+### 4. Default Login Credentials
 
-### Authentication
-- **ASHA Workers**: PIN-based login (stored securely with SHA-256 hash)
-- **PHC Staff**: Firebase email/password authentication
-- **Role-based UI**: Different interfaces based on user type
+**Mobile App (ASHA)**
+- PIN: 1234 (for testing only)
 
-### Patient Management
-- **Registration**: Add pregnant women and children
-- **Patient List**: Search and filter patients
-- **Patient Profiles**: View detailed patient information
-- **Offline Storage**: All data stored locally in SQLite
+**Web Dashboard (PHC)**
+- Email: admin@phc.local
+- Password: test1234
 
-### Visit Recording
-- **ANC Visits**: Record blood pressure, weight, notes
-- **Immunization**: Track vaccination schedules
-- **General Visits**: Record any health visit
-- **Next Visit Scheduling**: Set follow-up appointments
+## Key Features In Detail
 
-### Vaccination Tracking
-- **Vaccine Management**: Track due dates and given dates
-- **Status Updates**: Mark vaccinations as given/pending/overdue
-- **Reminders**: Automatic notifications for due vaccinations
+### Mobile App
 
-### Voice Notes
-- **Audio Recording**: Record voice notes during visits
-- **Cloud Storage**: Sync audio files to Firebase Storage
-- **Playback**: Listen to recorded notes
+#### Offline-First Architecture
+- All data stored locally in SQLite
+- Work without internet connection
+- Background sync when online
+- Conflict resolution handling
 
-### Offline-First Sync
-- **Local Storage**: All data stored in SQLite
-- **Background Sync**: Automatic sync when online
-- **Manual Sync**: Force sync with "Sync Now" button
-- **Conflict Resolution**: Handle sync conflicts gracefully
+#### Patient Management
+- Register new patients
+- Update patient details
+- Track pregnancy status
+- Monitor child growth
+- Record family history
 
-### Notifications
-- **Visit Reminders**: Notifications for upcoming visits
-- **Vaccination Alerts**: Reminders for due vaccinations
-- **Daily Sync Reminders**: Encourage regular data sync
+#### Visit Tracking
+- Schedule appointments
+- Record vital signs
+- Track symptoms
+- Add notes and observations
+- Set follow-up reminders
 
-### Multilingual Support
-- **Languages**: English and Hindi
-- **Dynamic Switching**: Change language in settings
-- **Complete Translation**: All UI elements translated
+#### Vaccination Module
+- View vaccination schedule
+- Record vaccine administration
+- Track due/overdue vaccines
+- Generate reminder lists
 
-## 🖥️ Dashboard Features
+### Web Dashboard
 
-### Authentication
-- **PHC Staff Login**: Firebase email/password authentication
-- **Secure Access**: Protected routes and session management
+#### Analytics Dashboard
+- Key performance indicators
+- Patient demographics
+- Visit statistics
+- Vaccination coverage
+- ASHA performance metrics
 
-### Data Visualization
-- **Dashboard Overview**: Key metrics and statistics
-- **Patient Management**: View and search all patients
-- **Visit Tracking**: Monitor all health visits
-- **Analytics**: Charts and trends for data insights
+#### Patient Overview
+- Comprehensive patient lists
+- Detailed patient profiles
+- Visit history
+- Vaccination status
+- Family connections
 
-### Real-time Updates
-- **Live Data**: Real-time updates from mobile app sync
-- **Patient Lists**: Comprehensive patient information
-- **Visit History**: Complete visit records
-- **Vaccination Status**: Track immunization progress
+#### Geographic Insights
+- Village-wise distribution
+- Coverage analysis
+- Resource allocation
+- Risk area identification
 
-### Analytics & Reporting
-- **Visit Trends**: Monthly visit patterns
-- **Vaccination Coverage**: Status distribution
-- **Village-wise Data**: Patient distribution by location
-- **Performance Metrics**: Key health indicators
+## Contributing
 
-## 🔒 Security Features
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-### Data Protection
-- **PIN Hashing**: SHA-256 encryption for ASHA PINs
-- **AES Encryption**: Sensitive data encrypted before storage
-- **Secure Sync**: HTTPS communication with Firebase
-- **Local Encryption**: SQLite database encryption
+## License
 
-### Access Control
-- **Role-based Access**: Different permissions for ASHA vs PHC
-- **Session Management**: Secure authentication sessions
-- **Data Isolation**: User-specific data access
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support and queries:
+- 📧 Email: support@example.com
+- 🌐 Website: https://example.com
+- 📱 Mobile: +1234567890
+
+## Acknowledgments
+
+- Thanks to all ASHA workers for their feedback
+- PHC staff for requirements guidance
+- Development team for their contributions
 
 ## 📊 Database Schema
 
