@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NewPatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
@@ -24,8 +25,7 @@ const NewPatientListScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [showLangModal, setShowLangModal] = useState(false);
-  const [language, setLanguage] = useState(i18n.language || 'en');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -117,7 +117,7 @@ const NewPatientListScreen = ({ navigation }) => {
           ]}
         />
         <Text style={styles.syncText}>
-          {item.synced ? 'Synced' : 'Not Synced'}
+          {item.synced ? t('synced') : t('not_synced')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -135,7 +135,7 @@ const NewPatientListScreen = ({ navigation }) => {
                 onPress={() => setShowLangModal(true)}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               >
-                <Text style={styles.langTextHeader}>{language === 'hi' ? 'हिं' : language === 'ta' ? 'த' : 'EN'}</Text>
+                <Text style={styles.langTextHeader}>{i18n.language === 'hi' ? '\u0939\u093f\u0902' : i18n.language === 'ta' ? '\u0ba4' : i18n.language === 'ml' ? '\u0d2e' : 'EN'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -202,9 +202,9 @@ const NewPatientListScreen = ({ navigation }) => {
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>
-          {searchQuery || activeFilter !== 'all'
-            ? t('no_match_search')
-            : t('no_patients')}
+                  {searchQuery || activeFilter !== 'all'
+                    ? t('no_match_search')
+                    : t('no_patients')}
                 </Text>
               </View>
             )}
@@ -231,21 +231,27 @@ const NewPatientListScreen = ({ navigation }) => {
               <Text style={styles.modalTitle}>Select Language</Text>
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => { i18n.changeLanguage('en'); setLanguage('en'); setShowLangModal(false); }}
+                onPress={async () => { await i18n.changeLanguage('en'); await AsyncStorage.setItem('@app_language','en'); setShowLangModal(false); }}
               >
-                <Text style={[styles.modalItemText, language === 'en' && styles.modalItemActive]}>English (EN)</Text>
+                <Text style={[styles.modalItemText, i18n.language === 'en' && styles.modalItemActive]}>English (EN)</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => { i18n.changeLanguage('hi'); setLanguage('hi'); setShowLangModal(false); }}
+                onPress={async () => { await i18n.changeLanguage('hi'); await AsyncStorage.setItem('@app_language','hi'); setShowLangModal(false); }}
               >
-                <Text style={[styles.modalItemText, language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
+                <Text style={[styles.modalItemText, i18n.language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => { i18n.changeLanguage('ta'); setLanguage('ta'); setShowLangModal(false); }}
+                onPress={async () => { await i18n.changeLanguage('ta'); await AsyncStorage.setItem('@app_language','ta'); setShowLangModal(false); }}
               >
-                <Text style={[styles.modalItemText, language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
+                <Text style={[styles.modalItemText, i18n.language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={async () => { await i18n.changeLanguage('ml'); await AsyncStorage.setItem('@app_language','ml'); setShowLangModal(false); }}
+              >
+                <Text style={[styles.modalItemText, i18n.language === 'ml' && styles.modalItemActive]}>മലയാളം (ML)</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

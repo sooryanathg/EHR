@@ -13,6 +13,7 @@ import {
 
 const NewAddPatientScreen = ({ navigation }) => {
   const { t } = useTranslation();
+  const i18n = require('i18next');
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -62,7 +63,7 @@ const NewAddPatientScreen = ({ navigation }) => {
         type: formData.type,
         village: formData.village.trim(),
         health_id: formData.health_id.trim() || null,
-        language: 'en',
+        language: i18n.language || 'en',
       });
 
       Alert.alert(t('success'), t('patient_added'), [

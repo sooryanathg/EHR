@@ -9,16 +9,18 @@ import {
   Alert,
 } from 'react-native';
 import { VaccinationService } from '../database/vaccinationService';
+import { useTranslation } from 'react-i18next';
 
 const AddVaccinationScreen = ({ route, navigation }) => {
     const { patient } = route.params;
+    const { t } = useTranslation();
   const [vaccineName, setVaccineName] = useState('');
   const [vaccineBatch, setVaccineBatch] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleAddVaccination = async () => {
     if (!vaccineName.trim()) {
-      Alert.alert('Error', 'Please enter the vaccine name');
+      Alert.alert(t('error'), t('enter_vaccine_name'));
       return;
     }
 
@@ -32,45 +34,45 @@ const AddVaccinationScreen = ({ route, navigation }) => {
       };
 
       await VaccinationService.createVaccination(vaccination);
-      Alert.alert('Success', 'Vaccination record added successfully');
+      Alert.alert(t('success'), t('vaccination_added_success'));
       navigation.goBack();
     } catch (error) {
       console.error('Error adding vaccination:', error);
-      Alert.alert('Error', 'Failed to add vaccination record');
+      Alert.alert(t('error'), t('vaccination_add_error'));
     }
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.formContainer}>
-        <Text style={styles.label}>Vaccine Name *</Text>
+        <Text style={styles.label}>{t('vaccine_name')} *</Text>
         <TextInput
           style={styles.input}
           value={vaccineName}
           onChangeText={setVaccineName}
-          placeholder="Enter vaccine name"
+          placeholder={t('enter_vaccine_name')}
         />
 
-        <Text style={styles.label}>Batch Number</Text>
+        <Text style={styles.label}>{t('batch_number')}</Text>
         <TextInput
           style={styles.input}
           value={vaccineBatch}
           onChangeText={setVaccineBatch}
-          placeholder="Enter batch number"
+          placeholder={t('enter_batch_number')}
         />
 
-        <Text style={styles.label}>Notes</Text>
+        <Text style={styles.label}>{t('notes')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Enter any additional notes"
+          placeholder={t('enter_additional_notes')}
           multiline
           numberOfLines={4}
         />
 
         <TouchableOpacity style={styles.button} onPress={handleAddVaccination}>
-          <Text style={styles.buttonText}>Add Vaccination</Text>
+          <Text style={styles.buttonText}>{t('add_vaccination')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

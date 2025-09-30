@@ -9,9 +9,11 @@ import {
   ScrollView
 } from 'react-native';
 import { VisitService } from '../database/visitService';
+import { useTranslation } from 'react-i18next';
 
 const AddVisitScreen = ({ navigation, route }) => {
   const { patient } = route.params;
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: 'general',
@@ -38,10 +40,10 @@ const AddVisitScreen = ({ navigation, route }) => {
 
       await VisitService.createVisit(visitData);
       navigation.goBack();
-      Alert.alert('Success', 'Visit added successfully');
+      Alert.alert(t('success'), t('visit_added_success'));
     } catch (error) {
       console.error('Error saving visit:', error);
-      Alert.alert('Error', 'Failed to save visit');
+      Alert.alert(t('error'), t('visit_add_error'));
     } finally {
       setLoading(false);
     }
@@ -50,13 +52,13 @@ const AddVisitScreen = ({ navigation, route }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Visit</Text>
+        <Text style={styles.title}>{t('add_visit')}</Text>
         <Text style={styles.patientName}>{patient.name}</Text>
       </View>
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Visit Type</Text>
+          <Text style={styles.label}>{t('visit_type')}</Text>
           <View style={styles.radioGroup}>
             {['general', 'anc', 'immunization'].map(type => (
               <TouchableOpacity
@@ -71,7 +73,7 @@ const AddVisitScreen = ({ navigation, route }) => {
                   styles.radioText,
                   formData.type === type && styles.radioTextSelected
                 ]}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === 'general' ? t('visit_type_general') : type === 'anc' ? t('visit_type_anc') : t('visit_type_immunization')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -79,10 +81,10 @@ const AddVisitScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Blood Pressure</Text>
+          <Text style={styles.label}>{t('blood_pressure')}</Text>
           <View style={styles.bpContainer}>
             <View style={styles.bpInput}>
-              <Text style={styles.bpLabel}>Systolic</Text>
+              <Text style={styles.bpLabel}>{t('systolic')}</Text>
               <TextInput
                 style={styles.input}
                 value={formData.bp_systolic}
@@ -92,7 +94,7 @@ const AddVisitScreen = ({ navigation, route }) => {
               />
             </View>
             <View style={styles.bpInput}>
-              <Text style={styles.bpLabel}>Diastolic</Text>
+              <Text style={styles.bpLabel}>{t('diastolic')}</Text>
               <TextInput
                 style={styles.input}
                 value={formData.bp_diastolic}
@@ -105,30 +107,30 @@ const AddVisitScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Weight (kg)</Text>
+          <Text style={styles.label}>{t('weight_kg')}</Text>
           <TextInput
             style={styles.input}
             value={formData.weight}
             onChangeText={(value) => setFormData(prev => ({ ...prev, weight: value }))}
-            placeholder="Enter weight"
+            placeholder={t('enter_weight_placeholder')}
             keyboardType="numeric"
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Notes</Text>
+          <Text style={styles.label}>{t('notes')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={formData.notes}
             onChangeText={(value) => setFormData(prev => ({ ...prev, notes: value }))}
-            placeholder="Enter visit notes..."
+            placeholder={t('enter_visit_notes_placeholder')}
             multiline
             numberOfLines={4}
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Next Visit Date</Text>
+          <Text style={styles.label}>{t('next_visit_date')}</Text>
           <TextInput
             style={styles.input}
             value={formData.next_visit}
@@ -142,7 +144,7 @@ const AddVisitScreen = ({ navigation, route }) => {
             style={styles.cancelButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -150,7 +152,7 @@ const AddVisitScreen = ({ navigation, route }) => {
             onPress={handleSave}
             disabled={loading}
           >
-            <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Visit'}</Text>
+            <Text style={styles.saveButtonText}>{loading ? t('saving') : t('save_visit')}</Text>
           </TouchableOpacity>
         </View>
       </View>

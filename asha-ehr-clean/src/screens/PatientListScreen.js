@@ -21,8 +21,7 @@ const PatientListScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLangModal, setShowLangModal] = useState(false);
-  const [language, setLanguage] = useState(i18n.language || 'en');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -49,7 +48,7 @@ const PatientListScreen = ({ navigation }) => {
             style={[styles.langButtonHeader, { marginLeft: 8 }]}
             onPress={() => setShowLangModal(true)}
           >
-            <Text style={[styles.langTextHeader]}>{language === 'hi' ? 'हिं' : language === 'ta' ? 'த' : 'EN'}</Text>
+            <Text style={[styles.langTextHeader]}>{i18n.language === 'hi' ? 'हिं' : i18n.language === 'ta' ? 'த' : i18n.language === 'ml' ? 'മ' : 'EN'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -65,7 +64,7 @@ const PatientListScreen = ({ navigation }) => {
         </View>
       ),
     });
-  }, [navigation, language]);
+  }, [navigation, i18n.language]);
 
   const load = async () => {
     try {
@@ -184,21 +183,21 @@ const PatientListScreen = ({ navigation }) => {
             <Text style={styles.modalTitle}>Select Language</Text>
             <TouchableOpacity
               style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('en'); setLanguage('en'); setShowLangModal(false); }}
+              onPress={() => { i18n.changeLanguage('en'); setShowLangModal(false); }}
             >
-              <Text style={[styles.modalItemText, language === 'en' && styles.modalItemActive]}>English (EN)</Text>
+              <Text style={[styles.modalItemText, i18n.language === 'en' && styles.modalItemActive]}>English (EN)</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('hi'); setLanguage('hi'); setShowLangModal(false); }}
+              onPress={() => { i18n.changeLanguage('hi'); setShowLangModal(false); }}
             >
-              <Text style={[styles.modalItemText, language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
+              <Text style={[styles.modalItemText, i18n.language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('ta'); setLanguage('ta'); setShowLangModal(false); }}
+              onPress={() => { i18n.changeLanguage('ta'); setShowLangModal(false); }}
             >
-              <Text style={[styles.modalItemText, language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
+              <Text style={[styles.modalItemText, i18n.language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

@@ -11,6 +11,7 @@ import {
 import { PatientService } from '../database/patientService';
 import { VisitService } from '../database/visitService';
 import { VaccinationService } from '../database/vaccinationService';
+import { useTranslation } from 'react-i18next';
 
 const PatientProfileScreen = ({ navigation, route }) => {
   const [patient, setPatient] = useState(null);
@@ -53,6 +54,8 @@ const PatientProfileScreen = ({ navigation, route }) => {
     return unsubscribe;
   }, [navigation, route.params?.patientId]);
 
+  const { t } = useTranslation();
+
   const renderVisit = (visit) => {
     const date = new Date(visit.date).toLocaleDateString();
     const nextDate = visit.next_visit ? new Date(visit.next_visit).toLocaleDateString() : null;
@@ -68,13 +71,13 @@ const PatientProfileScreen = ({ navigation, route }) => {
         
         {(visit.bp_systolic || visit.bp_diastolic) && (
           <Text style={styles.visitDetail}>
-            BP: {visit.bp_systolic}/{visit.bp_diastolic} mmHg
+            {t('bp_label')} {visit.bp_systolic}/{visit.bp_diastolic} mmHg
           </Text>
         )}
         
         {visit.weight && (
           <Text style={styles.visitDetail}>
-            Weight: {visit.weight} kg
+            {t('weight_label')} {visit.weight} kg
           </Text>
         )}
         
@@ -86,7 +89,7 @@ const PatientProfileScreen = ({ navigation, route }) => {
         
         {nextDate && (
           <Text style={styles.nextVisit}>
-            Next Visit: {nextDate}
+            {t('next_visit_label')} {nextDate}
           </Text>
         )}
       </View>
@@ -104,12 +107,12 @@ const PatientProfileScreen = ({ navigation, route }) => {
   if (!patient) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Patient data not found</Text>
+        <Text style={styles.errorText}>{t('patient_data_not_found')}</Text>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('go_back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -142,12 +145,12 @@ const PatientProfileScreen = ({ navigation, route }) => {
         </View>
         
         <Text style={styles.vaccinationDate}>
-          Due: {dueDate}
+          {t('due_label')} {dueDate}
         </Text>
         
         {givenDate && (
           <Text style={styles.vaccinationDate}>
-            Given: {givenDate}
+            {t('given_label')} {givenDate}
           </Text>
         )}
       </View>
@@ -164,59 +167,59 @@ const PatientProfileScreen = ({ navigation, route }) => {
             { backgroundColor: patient.synced ? '#27ae60' : '#f39c12' }
           ]} />
           <Text style={styles.syncText}>
-            {patient.synced ? 'Synced' : 'Pending Sync'}
+            {patient.synced ? t('synced') : t('pending_sync')}
           </Text>
         </View>
       </View>
 
       <View style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Patient Information</Text>
+          <Text style={styles.sectionHeader}>{t('patient_information')}</Text>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name:</Text>
+            <Text style={styles.infoLabel}>{t('name')}:</Text>
             <Text style={styles.infoValue}>{patient.name}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Age:</Text>
-            <Text style={styles.infoValue}>{patient.age} years</Text>
+            <Text style={styles.infoLabel}>{t('age')}:</Text>
+            <Text style={styles.infoValue}>{patient.age} {t('years')}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Type:</Text>
+            <Text style={styles.infoLabel}>{t('type')}:</Text>
             <Text style={styles.infoValue}>
-              {patient.type === 'pregnant' ? 'Pregnant Woman' : 'Child'}
+              {patient.type === 'pregnant' ? t('patient_type_pregnant') : (patient.type === 'lactating' ? t('patient_type_lactating') : t('patient_type_child'))}
             </Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Village:</Text>
+            <Text style={styles.infoLabel}>{t('village')}:</Text>
             <Text style={styles.infoValue}>{patient.village}</Text>
           </View>
           
           {patient.health_id && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Health ID:</Text>
+              <Text style={styles.infoLabel}>{t('health_id')}:</Text>
               <Text style={styles.infoValue}>{patient.health_id}</Text>
             </View>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Quick Actions</Text>
+          <Text style={styles.sectionHeader}>{t('quick_actions')}</Text>
           
           <TouchableOpacity style={styles.actionButton} onPress={handleAddVisit}>
-            <Text style={styles.actionButtonText}>+ Add Visit</Text>
+            <Text style={styles.actionButtonText}>{t('add_visit')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionHeader}>Visit History</Text>
+            <Text style={styles.sectionHeader}>{t('visit_history')}</Text>
           </View>
           {visits.length === 0 ? (
-            <Text style={styles.emptyText}>No visits recorded yet.</Text>
+            <Text style={styles.emptyText}>{t('no_visits')}</Text>
           ) : (
             visits.map(renderVisit)
           )}
@@ -224,16 +227,16 @@ const PatientProfileScreen = ({ navigation, route }) => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionHeader}>Vaccinations</Text>
+            <Text style={styles.sectionHeader}>{t('vaccinations')}</Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddVaccination}
             >
-              <Text style={styles.addButtonText}>+ Add Vaccination</Text>
+              <Text style={styles.addButtonText} numberOfLines={1} ellipsizeMode="tail">{t('add_vaccination_button')}</Text>
             </TouchableOpacity>
           </View>
           {vaccinations.length === 0 ? (
-            <Text style={styles.emptyText}>No vaccination records found</Text>
+            <Text style={styles.emptyText}>{t('no_vaccinations')}</Text>
           ) : (
             vaccinations.map(vaccination => renderVaccination(vaccination))
           )}
@@ -327,6 +330,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2c3e50',
     marginBottom: 15,
+    flex: 1,
+    minWidth: 0, // allow flex children to shrink on Android
+    flexWrap: 'wrap',
   },
   infoRow: {
     flexDirection: 'row',
@@ -493,7 +499,7 @@ const styles = StyleSheet.create({
   sectionHeaderContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 15,
   },
   addButton: {
@@ -501,11 +507,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
+    marginLeft: 8,
+    alignSelf: 'center',
   },
   addButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    maxWidth: 160,
   },
 });
 

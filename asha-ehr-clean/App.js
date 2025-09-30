@@ -4,6 +4,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next';
 import en from './src/i18n/en.json';
 import hi from './src/i18n/hi.json';
 import ta from './src/i18n/ta.json';
+import ml from './src/i18n/ml.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -15,6 +16,8 @@ import AddPatientScreen from './src/screens/NewAddPatientScreen';
 import PatientProfileScreen from './src/screens/PatientProfileScreen';
 import AddVisitScreen from './src/screens/AddVisitScreen';
 import AddVaccinationScreen from './src/screens/AddVaccinationScreen';
+import NetInfo from '@react-native-community/netinfo';
+import { syncManager } from './src/services/syncManager';
 
 
 // i18n initialization
@@ -25,6 +28,7 @@ i18n
       en: { translation: en },
       hi: { translation: hi },
       ta: { translation: ta },
+      ml: { translation: ml },
     },
     lng: 'en',
     fallbackLng: 'en',
@@ -50,6 +54,26 @@ export default function App() {
     initDatabase()
       .catch(() => {})
       .finally(() => setIsLoading(false));
+  }, []);
+
+  // When connectivity is regained, trigger background sync of pending items
+  useEffect(() => {
+    let wasConnected = false;
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isConnected = Boolean(state.isConnected && state.isInternetReachable);
+      // trigger sync only on transition from offline -> online
+      if (!wasConnected && isConnected) {
+        // fire-and-forget; syncManager handles internal locking and errors
+        try {
+          syncManager.syncData().catch((e) => console.warn('Background sync failed:', e));
+        } catch (e) {
+          console.warn('Error invoking syncManager:', e);
+        }
+      }
+      wasConnected = isConnected;
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Load persisted language and set i18n
