@@ -151,14 +151,14 @@ export default function Login() {
               <div className="text-sm text-blue-700">
                 <p>Default admin credentials are pre-filled.</p>
                 <p>Email: admin@phc.com</p>
-                <p>Password: admin123</p>
+                <p>Password: password123</p>
               </div>
             </div>
           </div>
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-600">
-              Demo credentials: admin@phc.com / admin123
+              Demo credentials: admin@phc.com / password123
             </p>
           </div>
         </form>
