@@ -59,6 +59,9 @@ const RemindersScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('reminders')}</Text>
+      <TouchableOpacity style={styles.todayButton} onPress={() => navigation.navigate('TodayVisits')}>
+        <Text style={styles.todayButtonText}>{t('today_visits') || "Today's Visits"}</Text>
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>{t('upcoming_visits')}</Text>
       {visitReminders.length === 0 ? (
@@ -100,6 +103,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#2c3e50' },
   sectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 8 },
+  todayButton: { backgroundColor: '#3498db', padding: 10, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 12 },
+  todayButtonText: { color: '#fff', fontWeight: '600' },
   card: { backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#eee' },
   cardTitle: { fontSize: 16, fontWeight: '600' },
   cardMeta: { fontSize: 13, color: '#7f8c8d', marginTop: 4 },

@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PatientService } from '../database/patientService';
+import { syncManager } from '../services/syncManager';
+import { 
+  createPregnancySchedule, 
+  createImmunizationSchedule,
+  setupNotificationCheck 
+} from '../database/scheduleService';
 import {
   View,
   Text,
@@ -8,8 +14,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const NewAddPatientScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -19,7 +27,18 @@ const NewAddPatientScreen = ({ navigation }) => {
     age: '',
     type: '',
     village: '',
-    health_id: ''
+    health_id: '',
+    phone: '',
+    aadhar: '',
+    // Pregnancy details
+    lmp_date: '',
+    gravida: '1',
+    parity: '0',
+    high_risk: false,
+    // Child details
+    dob: '',
+    weight: '',
+    parent_name: ''
   });
 
   const [selectedType, setSelectedType] = useState(null);
@@ -42,6 +61,39 @@ const NewAddPatientScreen = ({ navigation }) => {
       Alert.alert(t('error'), t('enter_village'));
       return false;
     }
+    
+    // Validate pregnancy details
+    if (formData.type === 'pregnant') {
+      if (!formData.lmp_date) {
+        Alert.alert(t('error'), t('enter_lmp_date'));
+        return false;
+      }
+      if (!formData.gravida || isNaN(parseInt(formData.gravida, 10))) {
+        Alert.alert(t('error'), t('enter_gravida'));
+        return false;
+      }
+      if (!formData.parity || isNaN(parseInt(formData.parity, 10))) {
+        Alert.alert(t('error'), t('enter_parity'));
+        return false;
+      }
+    }
+    
+    // Validate child details
+    if (formData.type === 'child') {
+      if (!formData.dob) {
+        Alert.alert(t('error'), t('enter_dob'));
+        return false;
+      }
+      if (!formData.weight || isNaN(parseFloat(formData.weight))) {
+        Alert.alert(t('error'), t('enter_weight'));
+        return false;
+      }
+      if (!formData.parent_name.trim()) {
+        Alert.alert(t('error'), t('enter_parent_name'));
+        return false;
+      }
+    }
+    
     return true;
   };
 
@@ -51,20 +103,74 @@ const NewAddPatientScreen = ({ navigation }) => {
     setFormData(prev => ({ ...prev, type }));
   };
 
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerField, setDatePickerField] = useState(null);
+
+  useEffect(() => {
+    // Set up notifications when component mounts
+    setupNotificationCheck();
+  }, []);
+
+  const handleDateChange = (event, date) => {
+    setShowDatePicker(false);
+    if (date) {
+      setFormData(prev => ({
+        ...prev,
+        [datePickerField]: date.toISOString().split('T')[0]
+      }));
+    }
+  };
+
+  const showDatePickerFor = (field) => {
+    setDatePickerField(field);
+    setShowDatePicker(true);
+  };
+
   const handleSave = async () => {
     console.log('Saving form data:', formData);
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      await PatientService.createPatient({
+      // Create basic patient record
+      const patientData = {
         name: formData.name.trim(),
         age: parseInt(formData.age, 10),
         type: formData.type,
         village: formData.village.trim(),
         health_id: formData.health_id.trim() || null,
         language: i18n.language || 'en',
-      });
+        phone: formData.phone.trim() || null,
+        aadhar: formData.aadhar.trim() || null,
+      };
+
+      // Add type-specific fields
+      if (formData.type === 'child') {
+        patientData.dob = formData.dob;
+      }
+
+      // Create patient
+      const patientId = await PatientService.createPatient(patientData);
+      console.log('Patient created, id=', patientId);
+
+      // Create schedules based on patient type (non-blocking, log errors)
+      try {
+        if (formData.type === 'pregnant') {
+          await createPregnancySchedule(
+            patientId,
+            formData.lmp_date
+          );
+        } else if (formData.type === 'child') {
+          await createImmunizationSchedule(
+            patientId,
+            formData.dob
+          );
+        }
+      } catch (schedErr) {
+        // Log schedule creation error but don't block the user flow
+        console.warn('Schedule creation failed for patient', patientId, schedErr.message || schedErr);
+      }
 
       Alert.alert(t('success'), t('patient_added'), [
         { text: t('ok'), onPress: () => navigation.goBack() }
@@ -77,9 +183,48 @@ const NewAddPatientScreen = ({ navigation }) => {
     }
   };
 
+  const handleManualSync = async () => {
+    console.log('Manual sync triggered from UI');
+    try {
+      await syncManager.syncData();
+      Alert.alert(t('success'), 'Sync completed (check logs for details)');
+    } catch (e) {
+      console.warn('Manual sync failed:', e);
+      Alert.alert(t('error'), 'Sync failed: ' + (e.message || String(e)));
+    }
+  };
+
+  const handleDebugSyncState = async () => {
+    try {
+      console.log('---- SYNC QUEUE DUMP ----');
+      const db = require('../database/schema').default;
+      const sq = await db.getAllAsync(`SELECT * FROM sync_queue ORDER BY id DESC LIMIT 50`);
+      console.log('sync_queue rows:', sq);
+
+      console.log('---- NOTIFICATION_QUEUE DUMP ----');
+      const nq = await db.getAllAsync(`SELECT * FROM notification_queue ORDER BY id DESC LIMIT 50`);
+      console.log('notification_queue rows:', nq);
+
+      // Then trigger a manual sync
+      await syncManager.syncData();
+      Alert.alert(t('success'), 'Debug dump logged and sync attempted. Check console/logs.');
+    } catch (e) {
+      console.error('Debug sync state failed:', e);
+      Alert.alert(t('error'), 'Debug failed: ' + (e.message || String(e)));
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.form}>
+        <View style={styles.syncRow}>
+          <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
+            <Text style={styles.syncButtonText}>Sync Now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.syncButton, { marginLeft: 10, backgroundColor: '#f39c12' }]} onPress={handleDebugSyncState}>
+            <Text style={styles.syncButtonText}>Debug Sync State</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.label}>{t('name')} *</Text>
         <TextInput
           style={styles.input}
@@ -143,6 +288,101 @@ const NewAddPatientScreen = ({ navigation }) => {
           placeholder={t('health_id') + ' (' + t('optional') + ')'}
         />
 
+        <Text style={styles.label}>{t('phone')}</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.phone}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text }))}
+          placeholder={t('phone') + ' (' + t('optional') + ')'}
+          keyboardType="phone-pad"
+        />
+
+        <Text style={styles.label}>{t('aadhar')}</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.aadhar}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, aadhar: text }))}
+          placeholder={t('aadhar') + ' (' + t('optional') + ')'}
+          keyboardType="numeric"
+        />
+
+        {/* Pregnancy-specific fields */}
+        {selectedType === 'pregnant' && (
+          <View>
+            <Text style={styles.sectionTitle}>{t('pregnancy_details')}</Text>
+            
+            <Text style={styles.label}>{t('lmp_date')} *</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => showDatePickerFor('lmp_date')}
+            >
+              <Text style={styles.dateButtonText}>
+                {formData.lmp_date || t('select_date')}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>{t('gravida')} *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.gravida}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, gravida: text }))}
+              placeholder={t('gravida')}
+              keyboardType="numeric"
+            />
+
+            <Text style={styles.label}>{t('parity')} *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.parity}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, parity: text }))}
+              placeholder={t('parity')}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity
+                style={[styles.checkbox, formData.high_risk && styles.checkboxChecked]}
+                onPress={() => setFormData(prev => ({ ...prev, high_risk: !prev.high_risk }))}
+              />
+              <Text style={styles.checkboxLabel}>{t('high_risk_pregnancy')}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Child-specific fields */}
+        {selectedType === 'child' && (
+          <View>
+            <Text style={styles.sectionTitle}>{t('child_details')}</Text>
+
+            <Text style={styles.label}>{t('date_of_birth')} *</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => showDatePickerFor('dob')}
+            >
+              <Text style={styles.dateButtonText}>
+                {formData.dob || t('select_date')}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>{t('birth_weight')} *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.weight}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
+              placeholder={t('weight_in_kg')}
+              keyboardType="decimal-pad"
+            />
+
+            <Text style={styles.label}>{t('parent_name')} *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.parent_name}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, parent_name: text }))}
+              placeholder={t('parent_name')}
+            />
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.saveButton, loading && styles.disabledButton]}
           onPress={handleSave}
@@ -150,6 +390,16 @@ const NewAddPatientScreen = ({ navigation }) => {
         >
           <Text style={styles.saveButtonText}>{loading ? t('saving') : t('save')}</Text>
         </TouchableOpacity>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={new Date()}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -163,6 +413,16 @@ const styles = StyleSheet.create({
   form: {
     padding: 20,
     backgroundColor: '#fff',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginTop: 20,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 5,
   },
   label: {
     fontSize: 16,
@@ -217,6 +477,55 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#95a5a6',
+  },
+  dateButton: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  dateButtonText: {
+    color: '#34495e',
+    fontSize: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#3498db',
+    borderRadius: 4,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3498db',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#34495e',
+  },
+  syncRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 12,
+  },
+  syncButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  syncButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

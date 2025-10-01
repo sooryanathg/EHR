@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useParams } from 'next/navigation';
@@ -210,11 +211,27 @@ export default function ASHADetail() {
                               <span>Patient: {patient?.name || v.patient_id}</span>
                             </div>
                           </div>
-                          <Link href={`/visits/${v.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 rounded-md transition-colors">
-                              View Details
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link href={`/visits/${v.id}`}>
+                              <button className="px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 rounded-md transition-colors">
+                                View Details
+                              </button>
+                            </Link>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateDoc(doc(db, 'visits', v.id), { validated: true });
+                                  // reload data
+                                  loadData();
+                                } catch (e) {
+                                  console.error('Failed to validate visit', e);
+                                }
+                              }}
+                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                              Validate
                             </button>
-                          </Link>
+                          </div>
                         </div>
                       </div>
                     );

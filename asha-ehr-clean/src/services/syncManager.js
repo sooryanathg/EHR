@@ -47,6 +47,8 @@ class SyncManager {
         return;
       }
 
+      console.log('Pending sync queue items count:', queueItems.length, 'types:', queueItems.map(i => i.record_type));
+
       // Process queue items in order
       for (const item of queueItems) {
         await this.processQueueItem(item);
@@ -74,8 +76,22 @@ class SyncManager {
   async processQueueItem(item) {
     const queueId = item.id;
     const recordType = item.record_type; // e.g., 'patient' or 'patients'
-    // Normalize table name
-    const table = recordType.endsWith('s') ? recordType : `${recordType}s`;
+    // Map record types to local DB table names (some local tables differ from remote collection names)
+    const tableMap = {
+      patient: 'patients',
+      patients: 'patients',
+      visit: 'visits',
+      visits: 'visits',
+      vaccination: 'vaccinations',
+      vaccinations: 'vaccinations',
+      scheduled_visits: 'scheduled_visits',
+      notification: 'notification_queue',
+      notifications: 'notification_queue',
+      pregnancy_details: 'pregnancy_details'
+    };
+  const table = tableMap[recordType] || (recordType.endsWith('s') ? recordType : `${recordType}s`);
+  // Use normalized record type (plural) for routing to FirestoreSync functions
+  const normalizedRecordType = recordType.endsWith('s') ? recordType : `${recordType}s`;
 
     // Mark as in_progress
     try {
@@ -96,21 +112,36 @@ class SyncManager {
 
     try {
       let docId = null;
-      if (table.startsWith('patients')) {
+      // Route based on the normalized record type (this avoids mismatches where local table names differ)
+      console.log('Processing sync queue item:', { queueId, recordType, table, normalizedRecordType });
+      if (normalizedRecordType === 'patients') {
         docId = await FirestoreSync.syncPatient(payload);
-      } else if (table.startsWith('visits')) {
+      } else if (normalizedRecordType === 'visits') {
         docId = await FirestoreSync.syncVisit(payload);
-      } else if (table.startsWith('vaccinations')) {
+      } else if (normalizedRecordType === 'vaccinations') {
         docId = await FirestoreSync.syncVaccination(payload);
+      } else if (normalizedRecordType === 'scheduled_visits') {
+        docId = await FirestoreSync.syncScheduledVisit(payload);
+      } else if (normalizedRecordType === 'notifications' || normalizedRecordType === 'notification') {
+        try {
+          docId = await FirestoreSync.syncNotification(payload);
+        } catch (e) {
+          console.error('FirestoreSync.syncNotification failed:', e.message || e);
+          throw e;
+        }
+      } else if (normalizedRecordType === 'pregnancy_details') {
+        docId = await FirestoreSync.syncPregnancyDetails(payload);
       } else {
         throw new Error(`Unknown record type for syncing: ${recordType}`);
       }
 
       // On success: update local row with firestore_id and mark synced
       try {
+        // For notification_queue the column names may differ in older DBs; attempt best-effort update
         await db.runAsync(`UPDATE ${table} SET firestore_id = ?, synced = 1 WHERE id = ?`, [docId, item.record_id]);
       } catch (e) {
-        console.warn('Failed to update local table after sync:', e.message);
+        console.warn(`Failed to update local table '${table}' after sync:`, e.message);
+        // If the table/column doesn't exist, it's likely a migration mismatch; continue without failing the sync
       }
 
       // Remove the queue item
@@ -119,11 +150,20 @@ class SyncManager {
     } catch (error) {
       console.error(`Failed to sync ${recordType} record:`, item.record_id, error);
 
-      // Update retry_count and mark failed
-      try {
-        await db.runAsync(`UPDATE sync_queue SET retry_count = retry_count + 1, status = 'failed', last_error = ? WHERE id = ?`, [error.message || String(error), queueId]);
-      } catch (e) {
-        console.warn('Failed to mark queue item failed:', e.message);
+      // If the error indicates no auth, revert to pending so it will be retried after sign-in
+      if (error && (error.code === 'NO_AUTH' || error.message === 'NO_AUTH')) {
+        try {
+          await db.runAsync(`UPDATE sync_queue SET status = 'pending', last_error = ? WHERE id = ?`, [error.message || String(error), queueId]);
+        } catch (e) {
+          console.warn('Failed to revert queue item to pending:', e.message);
+        }
+      } else {
+        // Update retry_count and mark failed for other errors
+        try {
+          await db.runAsync(`UPDATE sync_queue SET retry_count = retry_count + 1, status = 'failed', last_error = ? WHERE id = ?`, [error.message || String(error), queueId]);
+        } catch (e) {
+          console.warn('Failed to mark queue item failed:', e.message);
+        }
       }
     }
   }

@@ -24,6 +24,7 @@ const AddVisitScreen = ({ navigation, route }) => {
     bp_diastolic: '',
     weight: '',
     notes: '',
+    medicines: '',
     next_visit: ''
   });
   const [showVisitPicker, setShowVisitPicker] = useState(false);
@@ -40,7 +41,8 @@ const AddVisitScreen = ({ navigation, route }) => {
         date: formData.date || new Date().toISOString().split('T')[0],
         bp_systolic: formData.bp_systolic ? parseInt(formData.bp_systolic) : null,
         bp_diastolic: formData.bp_diastolic ? parseInt(formData.bp_diastolic) : null,
-        weight: formData.weight ? parseFloat(formData.weight) : null
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        medicines_given: formData.medicines ? formData.medicines.split('\n').map(s => s.trim()).filter(Boolean) : null
       };
 
   await VisitService.createAndQueueVisit(visitData);
@@ -170,6 +172,18 @@ const AddVisitScreen = ({ navigation, route }) => {
             placeholder={t('enter_visit_notes_placeholder')}
             multiline
             numberOfLines={4}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Medicines given (one per line)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.medicines}
+            onChangeText={(value) => setFormData(prev => ({ ...prev, medicines: value }))}
+            placeholder={'Paracetamol 250mg\nORS 1 sachet'}
+            multiline
+            numberOfLines={3}
           />
         </View>
 

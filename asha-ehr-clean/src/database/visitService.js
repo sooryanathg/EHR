@@ -7,7 +7,7 @@ export const VisitService = {
     return db.runAsync(
       `INSERT INTO visits (
         patient_id, date, type, bp_systolic, bp_diastolic,
-        weight, notes, next_visit
+        weight, notes, next_visit, medicines_given
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         visit.patient_id,
@@ -18,6 +18,7 @@ export const VisitService = {
         visit.weight || null,
         visit.notes || null,
         visit.next_visit || null,
+        visit.medicines_given ? JSON.stringify(visit.medicines_given) : null,
       ]
     ).then((result) => result.lastInsertRowId);
   },
@@ -38,6 +39,7 @@ export const VisitService = {
       bp_diastolic: visit.bp_diastolic || null,
       weight: visit.weight || null,
       notes: visit.notes || null,
+      medicines_given: visit.medicines_given || null,
       next_visit: visit.next_visit || null,
       created_at: new Date().toISOString(),
     };
@@ -65,7 +67,8 @@ export const VisitService = {
         bp_diastolic = ?,
         weight = ?,
         notes = ?,
-        next_visit = ?
+        next_visit = ?,
+        medicines_given = ?
       WHERE id = ?`,
       [
         visit.date,
@@ -75,6 +78,7 @@ export const VisitService = {
         visit.weight || null,
         visit.notes || null,
         visit.next_visit || null,
+        visit.medicines_given ? JSON.stringify(visit.medicines_given) : null,
         visit.id,
       ]
     );
@@ -95,6 +99,7 @@ export const VisitService = {
       bp_diastolic: visit.bp_diastolic || null,
       weight: visit.weight || null,
       notes: visit.notes || null,
+      medicines_given: visit.medicines_given || null,
       next_visit: visit.next_visit || null,
       updated_at: new Date().toISOString(),
     };

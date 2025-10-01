@@ -1,16 +1,16 @@
 {
   "app_title": "आशा ईएचआर",
-  "add_patient": "मरीज जोड़ें",
-  "add_new_patient": "नया मरीज जोड़ें",
+  "add_patient": "मरीज़ जोड़ें",
+  "add_new_patient": "नया मरीज़ जोड़ें",
   "name": "नाम",
-  "age": "आयु",
+  "age": "उम्र",
   "health_id": "स्वास्थ्य आईडी",
   "type": "प्रकार",
-  "village": "गांव",
+  "village": "गाँव",
   "save": "सहेजें",
-  "logout": "लॉगआउट"
+  "logout": "लॉग आउट",
 
-  ,"patients_title": "मरीज",
+  "patients_title": "मरीज",
   "search_placeholder": "मरीज खोजें...",
   "filter_all": "सभी",
   "filter_pregnant": "गर्भवती",
@@ -18,13 +18,39 @@
   "filter_child": "बच्चे",
   "no_match_search": "कोई मरीज आपकी खोज से मेल नहीं खाते",
   "no_patients": "अभी तक कोई मरीज नहीं जोड़ा गया",
+  
+  "phone": "फ़ोन नंबर",
+  "aadhar": "आधार नंबर",
+  "optional": "वैकल्पिक",
+  
+  "pregnancy_details": "गर्भावस्था का विवरण",
+  "lmp_date": "अंतिम मासिक धर्म की तिथि",
+  "edd_date": "प्रसव की अनुमानित तिथि",
+  "gravida": "गर्भावस्था की संख्या",
+  "parity": "प्रसव की संख्या",
+  "high_risk_pregnancy": "उच्च जोखिम वाली गर्भावस्था",
+  "select_date": "तिथि चुनें",
+  
+  "child_details": "बच्चे का विवरण",
+  "date_of_birth": "जन्म तिथि",
+  "birth_weight": "जन्म के समय वजन",
+  "weight_in_kg": "किलोग्राम में वजन",
+  "parent_name": "माता-पिता/अभिभावक का नाम",
+  
+  "enter_lmp_date": "कृपया अंतिम मासिक धर्म की तिथि दर्ज करें",
+  "enter_gravida": "कृपया गर्भावस्था की संख्या दर्ज करें",
+  "enter_parity": "कृपया प्रसव की संख्या दर्ज करें",
+  "enter_dob": "कृपया जन्म तिथि दर्ज करें",
+  "enter_weight": "कृपया जन्म के समय वजन दर्ज करें",
+  "enter_parent_name": "कृपया माता-पिता/अभिभावक का नाम दर्ज करें",
+  
   "add_button": "+ जोड़ें",
   "synced": "सिंक किया गया",
   "not_synced": "सिंक नहीं हुआ",
   "patient_type_pregnant": "गर्भवती महिला",
   "patient_type_lactating": "स्तनपान कराने वाली महिला",
-  "patient_type_child": "बच्चा"
-  ,
+  "patient_type_child": "बच्चा",
+  
   "add_visit": "दौरा जोड़े",
   "visit_type": "दौरे का प्रकार",
   "visit_type_general": "सामान्य",
@@ -42,27 +68,28 @@
   "cancel": "रद्द करें",
   "saving": "सहेजा जा रहा है...",
   "save_visit": "दौरा सहेजें",
+  
   "vaccine_name": "टीके का नाम",
   "enter_vaccine_name": "टीके का नाम दर्ज करें",
   "batch_number": "बैच नंबर",
   "enter_batch_number": "बैच नंबर दर्ज करें",
   "enter_additional_notes": "किसी भी अतिरिक्त नोट दर्ज करें",
-  "add_vaccination": "टीकाकरण जोड़ें"
-  ,
+  "add_vaccination": "टीकाकरण जोड़ें",
+  
   "success": "सफलता",
   "error": "त्रुटि",
   "visit_added_success": "दौरा सफलतापूर्वक जोड़ा गया",
   "visit_add_error": "दौरा सहेजने में विफल",
   "vaccination_added_success": "टीकाकरण रिकॉर्ड सफलतापूर्वक जोड़ा गया",
-  "vaccination_add_error": "टीकाकरण रिकॉर्ड जोड़ने में विफल"
-  ,
+  "vaccination_add_error": "टीकाकरण रिकॉर्ड जोड़ने में विफल",
+  
   "patient_data_not_found": "मरीज का डेटा नहीं मिला",
   "go_back": "वापस जाएं",
   "pending_sync": "सिंक लंबित",
   "patient_information": "मरीज की जानकारी",
   "years": "वर्ष",
-  "quick_actions": "त्वरित क्रियाएँ"
-  ,
+  "quick_actions": "त्वरित क्रियाएँ",
+  
   "visit_history": "दौरे इतिहास",
   "pregnant": "गर्भवती",
   "lactating": "स्तनपान",
@@ -75,8 +102,8 @@
   "weight_label": "वजन:",
   "next_visit_label": "अगला दौरा:",
   "due_label": "नियत:",
-  "given_label": "दिया गया:"
-  ,
+  "given_label": "दिया गया:",
+  
   "reminders": "अनुस्मारक",
   "upcoming_visits": "आगामी यात्रा",
   "no_upcoming_visits": "कोई आगामी यात्रा नहीं",

@@ -8,7 +8,32 @@
   "type": "Type",
   "village": "Village",
   "save": "Save",
-  "logout": "Logout"
+  "logout": "Logout",
+  
+  "phone": "Phone Number",
+  "aadhar": "Aadhar Number",
+  "optional": "Optional",
+  
+  "pregnancy_details": "Pregnancy Details",
+  "lmp_date": "Last Menstrual Period Date",
+  "edd_date": "Expected Delivery Date",
+  "gravida": "Number of Pregnancies",
+  "parity": "Number of Deliveries",
+  "high_risk_pregnancy": "High Risk Pregnancy",
+  "select_date": "Select Date",
+  
+  "child_details": "Child Details",
+  "date_of_birth": "Date of Birth",
+  "birth_weight": "Birth Weight",
+  "weight_in_kg": "Weight in kg",
+  "parent_name": "Parent/Guardian Name",
+  
+  "enter_lmp_date": "Please enter LMP date",
+  "enter_gravida": "Please enter number of pregnancies",
+  "enter_parity": "Please enter number of deliveries",
+  "enter_dob": "Please enter date of birth",
+  "enter_weight": "Please enter birth weight",
+  "enter_parent_name": "Please enter parent/guardian name"
 
   ,"patients_title": "Patients",
   "search_placeholder": "Search patients...",

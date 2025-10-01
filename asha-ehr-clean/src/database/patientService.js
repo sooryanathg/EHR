@@ -20,7 +20,9 @@ export const PatientService = {
         ]
       );
 
-      const patientId = result.lastInsertRowId;
+      // Different sqlite drivers return insert id with different property names.
+      const patientId = result && (result.insertId || result.lastInsertRowId || result.lastID || result.id);
+      console.log('PatientService.createPatient inserted id ->', patientId, 'rawResult:', result);
 
       // Add to sync queue - pass the full patient payload to avoid race conditions
       const fullPatient = {
@@ -34,7 +36,7 @@ export const PatientService = {
         created_at: new Date().toISOString()
       };
 
-      await SyncQueueService.addToSyncQueue('patient', patientId, 'create', fullPatient);
+  await SyncQueueService.addToSyncQueue('patient', patientId, 'create', fullPatient);
 
       // Trigger sync in the background
       syncManager.syncData().catch(console.error);

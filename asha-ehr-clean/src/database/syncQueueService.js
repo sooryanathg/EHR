@@ -8,13 +8,33 @@ export const SyncQueueService = {
       payload = data;
     } else {
       // Normalize table name: callers may pass 'patient' or 'patients'
-      const table = recordType.endsWith('s') ? recordType : `${recordType}s`;
-      payload = await db.getFirstAsync(`SELECT * FROM ${table} WHERE id = ?`, [recordId]);
+      // Map known pluralization mismatches (notifications -> notification_queue)
+      const tableMap = {
+        patient: 'patients',
+        patients: 'patients',
+        visit: 'visits',
+        visits: 'visits',
+        vaccination: 'vaccinations',
+        vaccinations: 'vaccinations',
+        scheduled_visits: 'scheduled_visits',
+        pregnancy_details: 'pregnancy_details',
+        notification: 'notification_queue',
+        notifications: 'notification_queue'
+      };
+
+      const table = tableMap[recordType] || (recordType.endsWith('s') ? recordType : `${recordType}s`);
+      try {
+        payload = await db.getFirstAsync(`SELECT * FROM ${table} WHERE id = ?`, [recordId]);
+      } catch (e) {
+        console.warn(`Failed to read payload from ${table} for addToSyncQueue:`, e.message);
+        payload = null;
+      }
     }
 
     const dataValue = payload ? JSON.stringify(payload) : JSON.stringify({});
     const statusValue = 'pending';
 
+    console.log('Adding to sync queue:', { recordType, recordId, action });
     return db.runAsync(
       `INSERT INTO sync_queue (record_type, record_id, action, data, status)
        VALUES (?, ?, ?, ?, ?)`,

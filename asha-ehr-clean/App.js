@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import i18n from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
+import * as Notifications from 'expo-notifications';
 import en from './src/i18n/en.json';
 import hi from './src/i18n/hi.json';
 import ta from './src/i18n/ta.json';
@@ -8,7 +9,18 @@ import ml from './src/i18n/ml.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView as RN_SafeAreaView, TouchableOpacity } from 'react-native';
+// Try to load react-native-safe-area-context at runtime; fall back to RN's SafeAreaView if unavailable
+let SafeAreaProvider = null;
+let SafeAreaView = RN_SafeAreaView;
+try {
+  // eslint-disable-next-line global-require
+  const safe = require('react-native-safe-area-context');
+  SafeAreaProvider = safe.SafeAreaProvider;
+  SafeAreaView = safe.SafeAreaView || RN_SafeAreaView;
+} catch (e) {
+  // If the package isn't available at runtime (Expo Go limitations), we'll use RN SafeAreaView
+}
 import { initDatabase } from './src/database/schema';
 import LoginScreen from './src/auth/LoginScreen';
 import PatientListScreen from './src/screens/NewPatientListScreen';
@@ -17,9 +29,30 @@ import PatientProfileScreen from './src/screens/PatientProfileScreen';
 import AddVisitScreen from './src/screens/AddVisitScreen';
 import AddVaccinationScreen from './src/screens/AddVaccinationScreen';
 import RemindersScreen from './src/screens/RemindersScreen';
+import TodayVisitsScreen from './src/screens/TodayVisitsScreen';
 import NetInfo from '@react-native-community/netinfo';
 import { syncManager } from './src/services/syncManager';
+import { auth } from './src/lib/firebase';
 
+// Configure notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+// Request notification permissions
+async function registerForPushNotificationsAsync() {
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  return finalStatus;
+}
 
 // i18n initialization
 i18n
@@ -52,29 +85,69 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initDatabase()
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
+    let unsubscribeFn = null;
+    async function initAll() {
+      try {
+        // Initialize notifications first
+        await registerForPushNotificationsAsync();
 
-  // When connectivity is regained, trigger background sync of pending items
-  useEffect(() => {
-    let wasConnected = false;
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const isConnected = Boolean(state.isConnected && state.isInternetReachable);
-      // trigger sync only on transition from offline -> online
-      if (!wasConnected && isConnected) {
-        // fire-and-forget; syncManager handles internal locking and errors
+        // Initialize database
+        await initDatabase();
+
+        // After DB is ready, set up connectivity listener for sync
+        let wasConnected = false;
+        const unsub = NetInfo.addEventListener((state) => {
+          const isConnected = Boolean(state.isConnected && state.isInternetReachable);
+          if (!wasConnected && isConnected) {
+            try {
+              syncManager.syncData().catch((e) => console.warn('Background sync failed:', e));
+            } catch (e) {
+              console.warn('Error invoking syncManager:', e);
+            }
+          }
+          wasConnected = isConnected;
+        });
+
+        // Normalize unsubscribe function
+        if (typeof unsub === 'function') unsubscribeFn = unsub;
+        else if (unsub && typeof unsub.remove === 'function') unsubscribeFn = () => unsub.remove();
+
+        // Listen for auth state changes to trigger sync when user signs in
         try {
-          syncManager.syncData().catch((e) => console.warn('Background sync failed:', e));
+          const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+            if (user) {
+              console.log('Firebase user signed in:', user.uid);
+              // trigger sync for deferred items
+              syncManager.syncData().catch((e) => console.warn('Sync after sign-in failed:', e));
+            } else {
+              console.log('No Firebase user');
+            }
+          });
+          // Merge cleanup
+          const prevUnsub = unsubscribeFn;
+          unsubscribeFn = () => {
+            if (prevUnsub) prevUnsub();
+            if (unsubscribeAuth) unsubscribeAuth();
+          };
         } catch (e) {
-          console.warn('Error invoking syncManager:', e);
+          console.warn('Failed to add auth state listener', e);
         }
+      } catch (error) {
+        console.warn('Initialization error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      wasConnected = isConnected;
-    });
+    }
 
-    return () => unsubscribe();
+    initAll();
+
+    return () => {
+      try {
+        if (unsubscribeFn) unsubscribeFn();
+      } catch (e) {
+        // ignore errors during cleanup
+      }
+    };
   }, []);
 
   // Load persisted language and set i18n
@@ -105,12 +178,11 @@ export default function App() {
     return <LoadingScreen />;
   }
 
-  return (
-    <I18nextProvider i18n={i18n}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={{ flex: 1 }}>
-          <NavigationContainer>
-            <Stack.Navigator 
+  const AppContent = (
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        <NavigationContainer>
+          <Stack.Navigator 
                 initialRouteName="Login"
                 screenOptions={{
                   headerShown: true,
@@ -125,10 +197,16 @@ export default function App() {
               <Stack.Screen name="AddVisit" component={AddVisitScreen} />
               <Stack.Screen name="AddVaccination" component={AddVaccinationScreen} />
               <Stack.Screen name="Reminders" component={RemindersScreen} />
+              <Stack.Screen name="TodayVisits" component={TodayVisitsScreen} />
             </Stack.Navigator>
-          </NavigationContainer>
-        </View>
-      </SafeAreaView>
+        </NavigationContainer>
+      </View>
+    </SafeAreaView>
+  );
+
+  return (
+    <I18nextProvider i18n={i18n}>
+      {SafeAreaProvider ? <SafeAreaProvider>{AppContent}</SafeAreaProvider> : AppContent}
     </I18nextProvider>
   );
 }
