@@ -62,11 +62,28 @@ export const PatientService = {
     );
   },
 
+
   getPatientById(id) {
     return db.getFirstAsync(
       `SELECT * FROM patients WHERE id = ?`,
       [id]
     );
+  },
+
+  async deletePatient(id) {
+    // Import SyncQueueService here to avoid circular dependency issues
+    const { SyncQueueService } = require('./syncQueueService');
+    try {
+      await db.runAsync(`DELETE FROM patients WHERE id = ?`, [id]);
+      // Add to sync queue for deletion
+      await SyncQueueService.addToSyncQueue('patient', id, 'delete', { id });
+      // Trigger sync in the background
+      syncManager.syncData().catch(console.error);
+      return true;
+    } catch (error) {
+      console.error('Error in PatientService.deletePatient:', error);
+      throw error;
+    }
   },
 };
 
