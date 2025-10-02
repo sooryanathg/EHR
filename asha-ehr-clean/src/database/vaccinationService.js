@@ -1,6 +1,4 @@
-import { openDatabaseSync } from 'expo-sqlite';
-
-const db = openDatabaseSync('asha_ehr.db');
+import db from './schema';
 
 export const VaccinationService = {
   async createVaccination(vaccination) {

@@ -3,6 +3,63 @@ import { openDatabaseSync } from 'expo-sqlite';
 export const databaseName = 'asha_ehr.db';
 const db = openDatabaseSync(databaseName);
 
+// Polyfill/augment the returned db with async helper methods when they are
+// not present. Some versions of the native sqlite binding expose helper
+// methods; others don't. The app code expects runAsync/getAllAsync/getFirstAsync/execAsync
+// so we add safe implementations that use transactions + executeSql which
+// avoid calling lower-level prepareAsync directly from JS.
+if (!db.runAsync) {
+  const execSql = (sql, params = []) => new Promise((resolve, reject) => {
+    try {
+      db.transaction(
+        (tx) => {
+          tx.executeSql(
+            sql,
+            params,
+            (_tx, result) => resolve(result),
+            (_tx, err) => {
+              // err may be an object or string depending on platform
+              reject(err || new Error('SQL execution error'));
+              return false;
+            }
+          );
+        },
+        (txErr) => reject(txErr),
+      );
+    } catch (e) {
+      reject(e);
+    }
+  });
+
+  db.runAsync = async (sql, params = []) => {
+    const res = await execSql(sql, params);
+    // Normalize result shape: some drivers store insertId/lastInsertRowId/rows
+    return res;
+  };
+
+  db.getAllAsync = async (sql, params = []) => {
+    const res = await execSql(sql, params);
+    // Attempt to return rows as an array across different driver shapes
+    if (!res) return [];
+    if (res.rows && Array.isArray(res.rows._array)) return res.rows._array;
+    if (res.rows && Array.isArray(res.rows)) return res.rows;
+    // Some drivers return the rows directly
+    if (Array.isArray(res)) return res;
+    return [];
+  };
+
+  db.getFirstAsync = async (sql, params = []) => {
+    const rows = await db.getAllAsync(sql, params);
+    return (rows && rows.length > 0) ? rows[0] : null;
+  };
+
+  db.execAsync = async (sql) => {
+    // execAsync is used for schema statements; run without parameters
+    await execSql(sql, []);
+    return true;
+  };
+}
+
 export const initDatabase = async () => {
   // Enable foreign keys and create tables
   const stmts = [
