@@ -118,8 +118,32 @@ const PatientProfileScreen = ({ navigation, route }) => {
     );
   }
 
+
   const handleAddVisit = () => {
     navigation.navigate('AddVisit', { patient });
+  };
+
+  const handleDeletePatient = async () => {
+    Alert.alert(
+      t('delete_patient_title', 'Delete Patient'),
+      t('delete_patient_confirm', 'Are you sure you want to delete this patient? This action cannot be undone.'),
+      [
+        { text: t('cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await PatientService.deletePatient(patient.id);
+              Alert.alert(t('deleted', 'Deleted'), t('patient_deleted', 'Patient deleted successfully.'));
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert(t('error', 'Error'), t('delete_patient_error', 'Failed to delete patient.'));
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleAddVaccination = () => {
@@ -206,11 +230,14 @@ const PatientProfileScreen = ({ navigation, route }) => {
           )}
         </View>
 
+
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>{t('quick_actions')}</Text>
-          
           <TouchableOpacity style={styles.actionButton} onPress={handleAddVisit}>
             <Text style={styles.actionButtonText}>{t('add_visit')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#e74c3c', marginTop: 10 }]} onPress={handleDeletePatient}>
+            <Text style={styles.actionButtonText}>{t('delete_patient', 'Delete Patient')}</Text>
           </TouchableOpacity>
         </View>
 
