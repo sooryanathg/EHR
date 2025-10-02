@@ -1,11 +1,33 @@
 import { db } from '../lib/firebase';
-import { collection, addDoc, updateDoc, doc, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, query, where, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
 
 export const FirestoreSync = {
   // Patient sync functions
-  async syncPatient(patient) {
+  async syncPatient(patient, action) {
     try {
+      // Handle delete action explicitly
+      if (action === 'delete') {
+        // If we have a firestore_id, delete by id
+        if (patient.firestore_id) {
+          await deleteDoc(doc(db, 'patients', patient.firestore_id));
+          return null;
+        }
+
+        // Otherwise attempt to find documents with matching local_id and delete them
+        try {
+          const q = query(collection(db, 'patients'), where('local_id', '==', patient.local_id));
+          const snap = await getDocs(q);
+          for (const d of snap.docs) {
+            await deleteDoc(doc(db, 'patients', d.id));
+          }
+          return null;
+        } catch (err) {
+          console.warn('Failed to delete patient by local_id:', err.message);
+          throw err;
+        }
+      }
+
       const patientsRef = collection(db, 'patients');
       const docRef = patient.firestore_id 
         ? doc(db, 'patients', patient.firestore_id)
@@ -32,8 +54,22 @@ export const FirestoreSync = {
   },
 
   // Vaccination sync functions
-  async syncVaccination(vaccination) {
+  async syncVaccination(vaccination, action) {
     try {
+      // handle delete action
+      if (action === 'delete') {
+        if (vaccination.firestore_id) {
+          await deleteDoc(doc(db, 'vaccinations', vaccination.firestore_id));
+          return null;
+        }
+        const q = query(collection(db, 'vaccinations'), where('local_id', '==', vaccination.local_id));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, 'vaccinations', d.id));
+        }
+        return null;
+      }
+
       const vaccinationsRef = collection(db, 'vaccinations');
       const docRef = vaccination.firestore_id 
         ? doc(db, 'vaccinations', vaccination.firestore_id)
@@ -60,8 +96,22 @@ export const FirestoreSync = {
   },
 
   // Visit sync functions
-  async syncVisit(visit) {
+  async syncVisit(visit, action) {
     try {
+      // handle delete action
+      if (action === 'delete') {
+        if (visit.firestore_id) {
+          await deleteDoc(doc(db, 'visits', visit.firestore_id));
+          return null;
+        }
+        const q = query(collection(db, 'visits'), where('local_id', '==', visit.local_id));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, 'visits', d.id));
+        }
+        return null;
+      }
+
       const visitsRef = collection(db, 'visits');
       const docRef = visit.firestore_id 
         ? doc(db, 'visits', visit.firestore_id)

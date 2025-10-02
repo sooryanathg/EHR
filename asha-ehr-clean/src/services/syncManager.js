@@ -96,26 +96,36 @@ class SyncManager {
 
     try {
       let docId = null;
+      const action = item.action || item.action_type || item.actionType || item.action;
+      // Normalize action: read from item.action if present (DB column is action)
+      const queueAction = item.action || item.action || 'create';
+
       if (table.startsWith('patients')) {
-        docId = await FirestoreSync.syncPatient(payload);
+        docId = await FirestoreSync.syncPatient(payload, queueAction);
       } else if (table.startsWith('visits')) {
-        docId = await FirestoreSync.syncVisit(payload);
+        docId = await FirestoreSync.syncVisit(payload, queueAction);
       } else if (table.startsWith('vaccinations')) {
-        docId = await FirestoreSync.syncVaccination(payload);
+        docId = await FirestoreSync.syncVaccination(payload, queueAction);
       } else {
         throw new Error(`Unknown record type for syncing: ${recordType}`);
       }
 
-      // On success: update local row with firestore_id and mark synced
-      try {
-        await db.runAsync(`UPDATE ${table} SET firestore_id = ?, synced = 1 WHERE id = ?`, [docId, item.record_id]);
-      } catch (e) {
-        console.warn('Failed to update local table after sync:', e.message);
-      }
+      // On success: if action is delete, just remove queue item (local row already deleted)
+      if (queueAction === 'delete') {
+        await SyncQueueService.removeSyncItem(queueId);
+        console.log(`Deleted remote ${table} for local id=${item.record_id}`);
+      } else {
+        // For create/update: update local row with firestore_id and mark synced
+        try {
+          await db.runAsync(`UPDATE ${table} SET firestore_id = ?, synced = 1 WHERE id = ?`, [docId, item.record_id]);
+        } catch (e) {
+          console.warn('Failed to update local table after sync:', e.message);
+        }
 
-      // Remove the queue item
-      await SyncQueueService.removeSyncItem(queueId);
-      console.log(`Synced ${table} local id=${item.record_id} to firestore id=${docId}`);
+        // Remove the queue item
+        await SyncQueueService.removeSyncItem(queueId);
+        console.log(`Synced ${table} local id=${item.record_id} to firestore id=${docId}`);
+      }
     } catch (error) {
       console.error(`Failed to sync ${recordType} record:`, item.record_id, error);
 
