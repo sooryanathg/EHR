@@ -15,9 +15,20 @@ function getAshaUidOrThrow(payload) {
 
 export const FirestoreSync = {
   // Patient sync functions
-  async syncPatient(patient, action) {
+  async syncPatient(patient, action, retryCount = 0) {
     try {
-      // Handle delete action explicitly
+      // Verify user has role in users collection first
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('NO_AUTH');
+      }
+
+      // Only retry up to 3 times
+      if (retryCount > 3) {
+        throw new Error('MAX_RETRIES_EXCEEDED');
+      }
+
+      // Handle delete action explicitly  
       if (action === 'delete') {
         // If we have a firestore_id, delete by id
         if (patient.firestore_id) {
@@ -48,6 +59,8 @@ export const FirestoreSync = {
       const patientData = {
         ...patient,
         asha_id: ashaId,
+        // Add sync metadata
+        last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_at: patient.created_at || new Date().toISOString(),
       };
@@ -61,6 +74,15 @@ export const FirestoreSync = {
       return docRef.id;
     } catch (error) {
       console.error('Error syncing patient:', error);
+      
+      // Handle permission errors
+      if (error.code === 'permission-denied' && retryCount < 3) {
+        console.log('Permission denied, retrying sync...');
+        // Wait for a short time before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return this.syncPatient(patient, action, retryCount + 1);
+      }
+      
       throw error;
     }
   },
@@ -161,8 +183,22 @@ export const FirestoreSync = {
   },
 
   // Scheduled visit sync
-  async syncScheduledVisit(schedule) {
+  async syncScheduledVisit(schedule, action) {
     try {
+      // handle delete action
+      if (action === 'delete') {
+        if (schedule.firestore_id) {
+          await deleteDoc(doc(db, 'scheduled_visits', schedule.firestore_id));
+          return null;
+        }
+        const q = query(collection(db, 'scheduled_visits'), where('local_id', '==', schedule.local_id));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, 'scheduled_visits', d.id));
+        }
+        return null;
+      }
+
       const schedulesRef = collection(db, 'scheduled_visits');
       const docRef = schedule.firestore_id
         ? doc(db, 'scheduled_visits', schedule.firestore_id)
@@ -190,8 +226,22 @@ export const FirestoreSync = {
   },
 
   // Pregnancy details sync
-  async syncPregnancyDetails(details) {
+  async syncPregnancyDetails(details, action) {
     try {
+      // handle delete action
+      if (action === 'delete') {
+        if (details.firestore_id) {
+          await deleteDoc(doc(db, 'pregnancy_details', details.firestore_id));
+          return null;
+        }
+        const q = query(collection(db, 'pregnancy_details'), where('local_id', '==', details.local_id));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, 'pregnancy_details', d.id));
+        }
+        return null;
+      }
+
       const pdRef = collection(db, 'pregnancy_details');
       const docRef = details.firestore_id
         ? doc(db, 'pregnancy_details', details.firestore_id)
@@ -219,9 +269,24 @@ export const FirestoreSync = {
   },
 
   // Notification sync
-  async syncNotification(notification) {
+  async syncNotification(notification, action) {
     try {
       console.log('syncNotification called with payload:', notification);
+      
+      // handle delete action
+      if (action === 'delete') {
+        if (notification.firestore_id) {
+          await deleteDoc(doc(db, 'notifications', notification.firestore_id));
+          return null;
+        }
+        const q = query(collection(db, 'notifications'), where('local_id', '==', notification.local_id));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, 'notifications', d.id));
+        }
+        return null;
+      }
+
       const notifsRef = collection(db, 'notifications');
       const docRef = notification.firestore_id
         ? doc(db, 'notifications', notification.firestore_id)

@@ -62,8 +62,23 @@ export const AuthService = {
     try {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
+      await AsyncStorage.setItem('asha_email', email);
+      await AsyncStorage.setItem('asha_password', password);
+      
       if (userCred && userCred.user && userCred.user.uid) {
-        await AsyncStorage.setItem('firebase_uid', userCred.user.uid);
+        const uid = userCred.user.uid;
+        await AsyncStorage.setItem('firebase_uid', uid);
+        
+        // Ensure user document exists
+        try {
+          await setDoc(doc(db, 'users', uid), {
+            email: email,
+            role: 'asha',
+            updated_at: new Date().toISOString()
+          }, { merge: true });
+        } catch (err) {
+          console.warn('Failed to update user document:', err);
+        }
       }
       return userCred.user;
     } catch (error) {
@@ -81,12 +96,22 @@ export const AuthService = {
       const hashedInputPIN = AuthService.hashPIN(pin);
       const isValid = storedHashedPIN === hashedInputPIN;
       if (isValid) {
-        // Sign into Firebase (anonymous) so the app has an authenticated Firebase user
+        // Ensure we have a proper Firebase user signed in, not anonymous
         try {
-          await signInAnonymously(auth);
+          const currentUser = auth.currentUser;
+          if (!currentUser || currentUser.isAnonymous) {
+            // Try to get stored email/password from AsyncStorage
+            const email = await AsyncStorage.getItem('asha_email');
+            const password = await AsyncStorage.getItem('asha_password');
+            
+            if (email && password) {
+              await AuthService.loginASHA(email, password);
+            } else {
+              console.warn('No stored credentials for Firebase login');
+            }
+          }
         } catch (firebaseError) {
-          console.warn('Firebase anonymous sign-in failed:', firebaseError);
-          // proceed — local auth still succeeds even if Firebase sign-in fails
+          console.warn('Firebase sign-in failed:', firebaseError);
         }
       }
 

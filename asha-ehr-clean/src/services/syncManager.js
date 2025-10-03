@@ -16,6 +16,8 @@ class SyncManager {
   constructor() {
     this.isSyncing = false;
     this.lastSyncAttempt = null;
+    this.syncStartTime = null;
+    this.SYNC_TIMEOUT = 5 * 60 * 1000; // 5 minutes timeout
   }
 
   async checkConnectivity() {
@@ -23,14 +25,38 @@ class SyncManager {
     return netInfo.isConnected && netInfo.isInternetReachable;
   }
 
+  clearSyncLock() {
+    this.isSyncing = false;
+    this.syncStartTime = null;
+  }
+
+  checkSyncTimeout() {
+    if (!this.syncStartTime) return false;
+    const now = Date.now();
+    return (now - this.syncStartTime) > this.SYNC_TIMEOUT;
+  }
+
   async syncData() {
+    // Check for timeout of previous sync
     if (this.isSyncing) {
-      console.log('Sync already in progress');
+      if (this.checkSyncTimeout()) {
+        console.log('Previous sync timed out, resetting lock');
+        this.clearSyncLock();
+      } else {
+        console.log('Sync already in progress');
+        return;
+      }
+    }
+
+    const { auth } = require('../lib/firebase');
+    if (!auth.currentUser) {
+      console.log('No Firebase user, skipping sync');
       return;
     }
 
     try {
       this.isSyncing = true;
+      this.syncStartTime = Date.now();
       this.lastSyncAttempt = new Date();
 
       const isConnected = await this.checkConnectivity();
@@ -59,8 +85,16 @@ class SyncManager {
       console.log('Sync completed successfully');
     } catch (error) {
       console.error('Sync failed:', error);
+      // Reset any in_progress items back to pending
+      try {
+        await db.runAsync(
+          `UPDATE sync_queue SET status = 'pending' WHERE status = 'in_progress'`
+        );
+      } catch (e) {
+        console.error('Failed to reset in_progress items:', e);
+      }
     } finally {
-      this.isSyncing = false;
+      this.clearSyncLock();
     }
   }
 

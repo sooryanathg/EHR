@@ -6,13 +6,17 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isPHCStaff() {
       return isAuthenticated() && 
-        (request.auth.token.role == 'phc' || request.auth.token.role == 'admin');
+        (getUserData().role == 'phc' || getUserData().role == 'admin');
     }
     
     function isASHA() {
-      return isAuthenticated() && request.auth.token.role == 'asha';
+      return isAuthenticated() && getUserData().role == 'asha';
     }
     
     // Patient collection rules
@@ -37,8 +41,10 @@ service cloud.firestore {
     
     // User profiles collection
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isPHCStaff());
-      allow write: if isPHCStaff();
+      // Allow users to read all user docs (needed for role checking)
+      // and write their own user document
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
   }
 }

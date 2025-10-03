@@ -20,11 +20,9 @@ export const PatientService = {
         ]
       );
 
-      // Different sqlite drivers return insert id with different property names.
       const patientId = result && (result.insertId || result.lastInsertRowId || result.lastID || result.id);
       console.log('PatientService.createPatient inserted id ->', patientId, 'rawResult:', result);
 
-      // Add to sync queue - pass the full patient payload to avoid race conditions
       const fullPatient = {
         id: patientId,
         name: patient.name,
@@ -36,15 +34,13 @@ export const PatientService = {
         created_at: new Date().toISOString()
       };
 
-  await SyncQueueService.addToSyncQueue('patient', patientId, 'create', fullPatient);
-
-      // Trigger sync in the background
+      await SyncQueueService.addToSyncQueue('patient', patientId, 'create', fullPatient);
       syncManager.syncData().catch(console.error);
 
       return patientId;
     } catch (error) {
       console.error('Error in PatientService.createPatient:', error);
-      throw error; // Re-throw the error to be caught by the UI
+      throw error;
     }
   },
 
@@ -62,7 +58,6 @@ export const PatientService = {
     );
   },
 
-
   getPatientById(id) {
     return db.getFirstAsync(
       `SELECT * FROM patients WHERE id = ?`,
@@ -70,136 +65,154 @@ export const PatientService = {
     );
   },
 
+  async verifyPatientReferences(id) {
+    const report = {
+      notifications: await db.getAllAsync(
+        'SELECT id FROM notification_queue WHERE patient_id = ?',
+        [id]
+      ),
+      scheduledVisits: await db.getAllAsync(
+        'SELECT id FROM scheduled_visits WHERE patient_id = ?',
+        [id]
+      ),
+      visits: await db.getAllAsync(
+        'SELECT id FROM visits WHERE patient_id = ?',
+        [id]
+      ),
+      vaccinations: await db.getAllAsync(
+        'SELECT id FROM vaccinations WHERE patient_id = ?',
+        [id]
+      ),
+      pregnancyDetails: await db.getAllAsync(
+        'SELECT id FROM pregnancy_details WHERE patient_id = ? OR child_patient_id = ?',
+        [id, id]
+      )
+    };
+
+    return {
+      hasReferences: Object.values(report).some(records => records.length > 0),
+      counts: {
+        notifications: report.notifications.length,
+        scheduledVisits: report.scheduledVisits.length,
+        visits: report.visits.length,
+        vaccinations: report.vaccinations.length,
+        pregnancyDetails: report.pregnancyDetails.length
+      }
+    };
+  },
+
   async deletePatient(id) {
     // Import SyncQueueService here to avoid circular dependency issues
     const { SyncQueueService } = require('./syncQueueService');
+    
     try {
-      // We'll dynamically find all tables that have a foreign key to patients
-      // and enqueue delete actions for their rows referencing this patient.
-      // This avoids missing any auxiliary tables that reference patients.
-      // Diagnostic: print FK list, integrity and counts to help debug constraints
-      try {
-        const fkList = await db.getAllAsync("PRAGMA foreign_key_list('visits')");
-        console.log('PRAGMA foreign_key_list(visits):', fkList);
-      } catch (e) {
-        console.warn('Failed reading PRAGMA foreign_key_list(visits):', e.message || e);
-      }
-      // List all tables and their foreign key lists to detect any unexpected FKs
-      try {
-        const masters = await db.getAllAsync(`SELECT name, type, sql FROM sqlite_master WHERE type IN ('table','trigger')`);
-        console.log('sqlite_master entries:', masters.map(m => ({ name: m.name, type: m.type })));
-        for (const m of masters) {
-          if (m.type === 'table') {
-            try {
-              const fk = await db.getAllAsync(`PRAGMA foreign_key_list('${m.name}')`);
-              console.log(`PRAGMA foreign_key_list(${m.name}):`, fk);
-            } catch (e) {
-              console.warn(`Failed PRAGMA foreign_key_list for ${m.name}:`, e.message || e);
-            }
-          }
-          if (m.type === 'trigger') {
-            console.log(`Trigger SQL for ${m.name}:`, m.sql && m.sql.substring(0, 200));
-          }
-        }
-      } catch (e) {
-        console.warn('Failed listing sqlite_master entries:', e.message || e);
-      }
-      try {
-        const integrity = await db.getFirstAsync("PRAGMA integrity_check");
-        console.log('PRAGMA integrity_check:', integrity);
-      } catch (e) {
-        console.warn('Failed running integrity_check:', e.message || e);
-      }
-      try {
-        const counts = await db.getAllAsync(`SELECT 'patients' as tbl, COUNT(*) as cnt FROM patients UNION ALL SELECT 'visits', COUNT(*) FROM visits UNION ALL SELECT 'vaccinations', COUNT(*) FROM vaccinations`);
-        console.log('Table counts:', counts);
-      } catch (e) {
-        console.warn('Failed getting table counts:', e.message || e);
-      }
-      try {
-        const refs = await db.getAllAsync(`SELECT * FROM visits WHERE patient_id = ? UNION ALL SELECT * FROM vaccinations WHERE patient_id = ?`, [id, id]);
-        console.log(`Rows referencing patient ${id}:`, refs);
-      } catch (e) {
-        console.warn('Failed listing referencing rows:', e.message || e);
-      }
-      // Now perform deletions inside a transaction to avoid FK race conditions.
-      // We'll dynamically delete rows from all tables that have FKs pointing to patients.
-      try {
-        await db.runAsync('BEGIN TRANSACTION');
+      // Begin transaction for atomic operation and enable foreign keys
+      await db.runAsync('BEGIN TRANSACTION');
+      await db.runAsync('PRAGMA foreign_keys = ON');
 
-        // Find all tables (excluding sqlite internal tables) and detect FK columns referencing patients
-        const tables = await db.getAllAsync(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`);
-        const tableNames = tables.map(t => t.name).filter(n => n !== 'sync_queue');
-
-        // mapping to recordType names used by SyncQueueService (best-effort)
-        const recordTypeMap = {
-          patients: 'patient',
-          visits: 'visit',
-          vaccinations: 'vaccination',
-          scheduled_visits: 'scheduled_visits',
-          pregnancy_details: 'pregnancy_details',
-          notification_queue: 'notifications'
-        };
-
-        for (const tableName of tableNames) {
-          try {
-            const fk = await db.getAllAsync(`PRAGMA foreign_key_list('${tableName}')`);
-            const fkCols = (fk || []).filter(f => f && f.table === 'patients').map(f => f.from);
-            if (!fkCols || fkCols.length === 0) continue;
-
-            // Select rows referencing this patient so we can enqueue delete actions per-row
-            const whereClause = fkCols.map(() => `${fkCols[0] ? fkCols[0] : 'patient_id'} = ?`).join(' OR ');
-            // Build params array of length fkCols.length all set to id
-            const params = Array(fkCols.length).fill(id);
-            const rows = await db.getAllAsync(`SELECT * FROM ${tableName} WHERE ${fkCols.map(c => `${c} = ?`).join(' OR ')}`, params);
-            console.log(`PatientService.deletePatient: found ${rows.length} rows in ${tableName} referencing patient ${id}`);
-
-            for (const r of rows) {
-              try {
-                const recordType = recordTypeMap[tableName] || tableName;
-                const recordId = r && (r.id || r.local_id || r.record_id);
-                // Only add to sync queue if we can determine a record id; otherwise add generic payload
-                if (recordId) {
-                  await SyncQueueService.addToSyncQueue(recordType, recordId, 'delete', r);
-                } else {
-                  await SyncQueueService.addToSyncQueue(recordType, id, 'delete', r);
-                }
-              } catch (e) {
-                console.warn(`Failed enqueuing delete for ${tableName} row:`, e && e.message ? e.message : e);
-              }
-            }
-
-            // Now delete the rows from the child table
-            await db.runAsync(`DELETE FROM ${tableName} WHERE ${fkCols.map(c => `${c} = ?`).join(' OR ')}`, params);
-            console.log(`PatientService.deletePatient: deleted rows from ${tableName} referencing patient ${id}`);
-          } catch (e) {
-            console.warn(`Failed processing table ${tableName} for patient ${id}:`, e && e.message ? e.message : e);
-          }
+      try {
+        // Get patient data before deletion
+        const patient = await this.getPatientById(id);
+        if (!patient) {
+          throw new Error(`Patient with id ${id} not found`);
         }
 
-        // Finally delete the patient row
+        // Double check foreign key status
+        const fkEnabled = await db.getFirstAsync('PRAGMA foreign_keys');
+        console.log('Foreign keys enabled:', fkEnabled);
+
+        // Verify data integrity before deletion
+        const integrityReport = await this.verifyPatientReferences(id);
+        console.log('Data integrity report:', integrityReport);
+
+        // Delete in correct order to respect foreign key constraints:
+
+        // 1. Delete notification_queue entries that reference this patient directly
+        // or indirectly through scheduled_visits
+        const notificationsQuery = `
+          SELECT nq.* FROM notification_queue nq
+          LEFT JOIN scheduled_visits sv ON nq.schedule_id = sv.id
+          WHERE nq.patient_id = ? OR sv.patient_id = ?`;
+        const notifications = await db.getAllAsync(notificationsQuery, [id, id]);
+        console.log(`PatientService.deletePatient: found ${notifications.length} notifications to delete`);
+        for (const notif of notifications) {
+          await SyncQueueService.addToSyncQueue('notifications', notif.id, 'delete', notif);
+          await db.runAsync('DELETE FROM notification_queue WHERE id = ?', [notif.id]);
+        }
+
+        // 2. Delete scheduled_visits
+        const scheduledVisits = await db.getAllAsync(
+          'SELECT * FROM scheduled_visits WHERE patient_id = ?',
+          [id]
+        );
+        console.log(`PatientService.deletePatient: found ${scheduledVisits.length} scheduled visits to delete`);
+        for (const visit of scheduledVisits) {
+          await SyncQueueService.addToSyncQueue('scheduled_visits', visit.id, 'delete', visit);
+          await db.runAsync('DELETE FROM scheduled_visits WHERE id = ?', [visit.id]);
+        }
+
+        // 3. Delete visits
+        const visits = await db.getAllAsync(
+          'SELECT * FROM visits WHERE patient_id = ?',
+          [id]
+        );
+        console.log(`PatientService.deletePatient: found ${visits.length} visits to delete`);
+        for (const visit of visits) {
+          await SyncQueueService.addToSyncQueue('visits', visit.id, 'delete', visit);
+          await db.runAsync('DELETE FROM visits WHERE id = ?', [visit.id]);
+        }
+
+        // 4. Delete vaccinations
+        const vaccinations = await db.getAllAsync(
+          'SELECT * FROM vaccinations WHERE patient_id = ?',
+          [id]
+        );
+        console.log(`PatientService.deletePatient: found ${vaccinations.length} vaccinations to delete`);
+        for (const vacc of vaccinations) {
+          await SyncQueueService.addToSyncQueue('vaccinations', vacc.id, 'delete', vacc);
+          await db.runAsync('DELETE FROM vaccinations WHERE id = ?', [vacc.id]);
+        }
+
+        // 5. Delete pregnancy_details that reference this patient as mother or child
+        const pregnancyDetails = await db.getAllAsync(
+          'SELECT * FROM pregnancy_details WHERE patient_id = ? OR child_patient_id = ?',
+          [id, id]
+        );
+        console.log(`PatientService.deletePatient: found ${pregnancyDetails.length} pregnancy details to delete`);
+        for (const pd of pregnancyDetails) {
+          await SyncQueueService.addToSyncQueue('pregnancy_details', pd.id, 'delete', pd);
+          await db.runAsync('DELETE FROM pregnancy_details WHERE id = ?', [pd.id]);
+        }
+
+        // 6. Finally, queue patient deletion and delete the patient record
         console.log(`PatientService.deletePatient: deleting patient ${id}`);
-        await db.runAsync(`DELETE FROM patients WHERE id = ?`, [id]);
-        await db.runAsync('COMMIT');
+        
+        // Import cleanup service
+        const { cleanupOrphanedRecords } = require('../services/cleanupService');
+        
+        // Queue up all the deletes in Firestore first
+        await SyncQueueService.addToSyncQueue('patient', id, 'delete', patient);
+        await db.runAsync('DELETE FROM patients WHERE id = ?', [id]);
 
-        // Add to sync queue for patient deletion and trigger background sync
-        await SyncQueueService.addToSyncQueue('patient', id, 'delete', { id });
+        // Run the cleanup to ensure all Firestore records are removed
+        await cleanupOrphanedRecords(id);
+
+        // Commit the transaction
+        await db.runAsync('COMMIT');
+        console.log(`PatientService.deletePatient: successfully deleted patient ${id} and all related records`);
+        
+        // Trigger sync in background
         syncManager.syncData().catch(console.error);
+        
         return true;
-      } catch (txErr) {
-        console.error('PatientService.deletePatient transaction failed, rolling back:', txErr);
-        try {
-          await db.runAsync('ROLLBACK');
-        } catch (rbErr) {
-          console.error('Rollback failed:', rbErr);
-        }
-        throw txErr;
+      } catch (error) {
+        console.error('PatientService.deletePatient transaction failed, rolling back:', error);
+        await db.runAsync('ROLLBACK');
+        throw error;
       }
     } catch (error) {
       console.error('Error in PatientService.deletePatient:', error);
       throw error;
     }
-  },
+  }
 };
-
-
