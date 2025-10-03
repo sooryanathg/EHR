@@ -69,9 +69,14 @@ export default function ASHAs() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">ASHAs</h1>
-          <p className="text-gray-600 mt-2">Click an ASHA to view her patients, visits and vaccinations</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">ASHAs</h1>
+            <p className="text-gray-600 mt-2">Click an ASHA to view her patients, visits and vaccinations</p>
+          </div>
+          <Link href="/ashas/register">
+            <button className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">Register New ASHA</button>
+          </Link>
         </div>
 
         {ashaList.length === 0 ? (

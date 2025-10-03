@@ -12,6 +12,15 @@ export default function Login() {
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Show error from localStorage if present (e.g., after ASHA redirect)
+  useEffect(() => {
+    const storedError = localStorage.getItem('loginError');
+    if (storedError) {
+      setError(storedError);
+      localStorage.removeItem('loginError');
+    }
+  }, []);
   const router = useRouter();
   const authInstance = auth as Auth;
 
@@ -59,13 +68,31 @@ export default function Login() {
           throw signInError;
         }
       }
-      
+
+      // Fetch user profile from Firestore
+      const { db } = await import('../../lib/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      const uid = userCredential.user.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userDocSnap = await getDoc(userDocRef);
+      let role = 'phc';
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        if (data.role) role = data.role;
+      }
+
+      if (role === 'asha') {
+  localStorage.setItem('loginError', 'ASHA workers are not allowed to access the PHC dashboard.');
+  setLoading(false);
+  await authInstance.signOut();
+  router.replace('/login');
+  return;
+      }
+
       // Set user role as 'phc' for dashboard users
       await setUserRoleAuth('phc');
-      
       // Force token refresh to get updated claims
       await userCredential.user.getIdToken(true);
-      
       router.push('/');
     } catch (error: any) {
       console.error('Login error:', error);
