@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppHeader from '../components/AppHeader';
 
 const NewPatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
@@ -24,8 +25,7 @@ const NewPatientListScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
-  const [showLangModal, setShowLangModal] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -35,19 +35,16 @@ const NewPatientListScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-  // add header button to navigate to Reminders
+  // Set up the custom header
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Reminders')}
-          style={{ marginRight: 12, padding: 6 }}
-        >
-          <Text style={{ color: '#3498db', fontWeight: '700' }}>{t('reminders')}</Text>
-        </TouchableOpacity>
-      ),
+      header: (props) => <AppHeader {...props} navigation={navigation} />,
+      headerShown: true,
+      headerStyle: {
+        height: 'auto',
+      },
     });
-  }, [navigation, t]);
+  }, [navigation]);
 
   const loadPatients = async () => {
     try {
@@ -93,9 +90,9 @@ const NewPatientListScreen = ({ navigation }) => {
 
   const getTypeLabel = (type) => {
     switch (type) {
-      case 'pregnant': return 'Pregnant Woman';
-      case 'lactating': return 'Lactating Woman';
-      case 'child': return 'Child';
+      case 'pregnant': return t('patient_type_pregnant');
+      case 'lactating': return t('patient_type_lactating');
+      case 'child': return t('patient_type_child');
       default: return type;
     }
   };
@@ -117,10 +114,10 @@ const NewPatientListScreen = ({ navigation }) => {
       <View style={styles.patientInfo}>
         <Text style={styles.patientName}>{item.name}</Text>
         <Text style={styles.patientType}>{getTypeLabel(item.type)}</Text>
-        <Text style={styles.patientDetails}>Age: {item.age}</Text>
-        <Text style={styles.patientVillage}>Village: {item.village}</Text>
+        <Text style={styles.patientDetails}>{t('age')}: {item.age} {t('years')}</Text>
+        <Text style={styles.patientVillage}>{t('village')}: {item.village}</Text>
         {item.health_id && (
-          <Text style={styles.healthId}>Health ID: {item.health_id}</Text>
+          <Text style={styles.healthId}>{t('health_id')}: {item.health_id}</Text>
         )}
       </View>
       <View style={styles.syncStatus}>
@@ -141,36 +138,6 @@ const NewPatientListScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.topBar}>
-            <Text style={styles.headerTitle}>{t('patients_title')}</Text>
-            <View style={styles.topBarRight}>
-              <TouchableOpacity
-                style={styles.langButtonHeader}
-                onPress={() => setShowLangModal(true)}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-              >
-                <Text style={styles.langTextHeader}>{i18n.language === 'hi' ? '\u0939\u093f\u0902' : i18n.language === 'ta' ? '\u0ba4' : i18n.language === 'ml' ? '\u0d2e' : 'EN'}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.langButtonHeader, { marginRight: 8 }]}
-                onPress={() => navigation.navigate('Reminders')}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-              >
-                <Text style={[styles.langTextHeader, { color: '#3498db' }]}>{t('reminders')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.logoutBtn}
-                onPress={handleLogout}
-                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                accessibilityRole="button"
-                accessibilityLabel="Logout"
-              >
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
           <TextInput
             style={styles.searchInput}
@@ -241,43 +208,7 @@ const NewPatientListScreen = ({ navigation }) => {
         >
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
-        {/* Language selection modal */}
-        <Modal
-          visible={showLangModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowLangModal(false)}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowLangModal(false)}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Language</Text>
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={async () => { await i18n.changeLanguage('en'); await AsyncStorage.setItem('@app_language','en'); setShowLangModal(false); }}
-              >
-                <Text style={[styles.modalItemText, i18n.language === 'en' && styles.modalItemActive]}>English (EN)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={async () => { await i18n.changeLanguage('hi'); await AsyncStorage.setItem('@app_language','hi'); setShowLangModal(false); }}
-              >
-                <Text style={[styles.modalItemText, i18n.language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={async () => { await i18n.changeLanguage('ta'); await AsyncStorage.setItem('@app_language','ta'); setShowLangModal(false); }}
-              >
-                <Text style={[styles.modalItemText, i18n.language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={async () => { await i18n.changeLanguage('ml'); await AsyncStorage.setItem('@app_language','ml'); setShowLangModal(false); }}
-              >
-                <Text style={[styles.modalItemText, i18n.language === 'ml' && styles.modalItemActive]}>മലയാളം (ML)</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Modal>
+
       </View>
     </SafeAreaView>
   );

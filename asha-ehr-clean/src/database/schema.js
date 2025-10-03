@@ -67,17 +67,8 @@ export const initDatabase = async () => {
     `PRAGMA foreign_keys = ON;`,
     `PRAGMA recursive_triggers = ON;`,
     
-    // Drop existing tables (for schema update)
-    `DROP TABLE IF EXISTS notification_queue;`,
-    `DROP TABLE IF EXISTS vaccinations;`,
-    `DROP TABLE IF EXISTS visits;`,
-    `DROP TABLE IF EXISTS scheduled_visits;`,
-    `DROP TABLE IF EXISTS pregnancy_details;`,
-    `DROP TABLE IF EXISTS sync_queue;`,
-    `DROP TABLE IF EXISTS patients;`,
-
-    // Recreate tables with proper CASCADE constraints
-    `CREATE TABLE patients (
+    // Create tables if they don't exist (preserve data)
+    `CREATE TABLE IF NOT EXISTS patients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       age INTEGER NOT NULL,
@@ -93,7 +84,7 @@ export const initDatabase = async () => {
       firestore_id TEXT
     );`,
 
-    `CREATE TABLE pregnancy_details (
+    `CREATE TABLE IF NOT EXISTS pregnancy_details (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
       lmp_date TEXT NOT NULL,
@@ -111,7 +102,7 @@ export const initDatabase = async () => {
       FOREIGN KEY (child_patient_id) REFERENCES patients(id) ON DELETE SET NULL
     );`,
 
-    `CREATE TABLE visits (
+    `CREATE TABLE IF NOT EXISTS visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
       date TEXT NOT NULL,
@@ -127,10 +118,10 @@ export const initDatabase = async () => {
       FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
     );`,
 
-    `CREATE TABLE scheduled_visits (
+    `CREATE TABLE IF NOT EXISTS scheduled_visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
-      visit_type TEXT NOT NULL CHECK (visit_type IN ('anc','immunization')),
+      visit_type TEXT NOT NULL CHECK (visit_type IN ('anc','immunization','general')),
       schedule_type TEXT NOT NULL,
       due_date TEXT NOT NULL,
       window_start TEXT NOT NULL,
@@ -146,7 +137,7 @@ export const initDatabase = async () => {
       FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE SET NULL
     );`,
 
-    `CREATE TABLE notification_queue (
+    `CREATE TABLE IF NOT EXISTS notification_queue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
       schedule_id INTEGER NOT NULL,
@@ -163,7 +154,7 @@ export const initDatabase = async () => {
       FOREIGN KEY (schedule_id) REFERENCES scheduled_visits(id) ON DELETE CASCADE
     );`,
 
-    `CREATE TABLE vaccinations (
+    `CREATE TABLE IF NOT EXISTS vaccinations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
       vaccine_name TEXT NOT NULL,
@@ -176,7 +167,7 @@ export const initDatabase = async () => {
       FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
     );`,
 
-    `CREATE TABLE sync_queue (
+    `CREATE TABLE IF NOT EXISTS sync_queue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       record_type TEXT NOT NULL,
       record_id INTEGER NOT NULL,

@@ -12,49 +12,124 @@ import { PatientService } from '../database/patientService';
 import { VisitService } from '../database/visitService';
 import { VaccinationService } from '../database/vaccinationService';
 import { useTranslation } from 'react-i18next';
+import db from '../database/schema';
+import { format, parseISO } from 'date-fns';
+import { SyncQueueService } from '../database/syncQueueService';
 
 const PatientProfileScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const [patient, setPatient] = useState(null);
   const [visits, setVisits] = useState([]);
   const [vaccinations, setVaccinations] = useState([]);
+  const [scheduledVisits, setScheduledVisits] = useState({
+    regular: [],
+    vaccinations: []
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const patientId = route.params?.patientId;
-        const [patientData, visitsData, vaccinationsData] = await Promise.all([
-          PatientService.getPatientById(patientId),
-          VisitService.getVisitsByPatientId(patientId),
-          VaccinationService.getVaccinationsByPatientId(patientId)
-        ]);
-        
-        if (!patientData) {
-          setError('Patient not found');
-          return;
-        }
-        
-        setPatient(patientData);
-        setVisits(visitsData);
-        setVaccinations(vaccinationsData);
-      } catch (error) {
-        console.error('Error loading patient:', error);
-        setError('Failed to load patient data');
-        Alert.alert('Error', 'Failed to load patient data');
-      } finally {
-        setLoading(false);
+  const handleScheduleVisit = () => {
+    navigation.navigate('ScheduleVisit', { patientId: route.params?.patientId });
+  };
+
+  const handleVisitMissed = async (visitId) => {
+    try {
+      const currentDate = new Date().toISOString();
+      await db.executeAsync(
+        'UPDATE scheduled_visits SET status = ?, missed_date = ? WHERE id = ?',
+        ['missed', currentDate, visitId]
+      );
+
+      // Get the updated scheduled visit for sync
+      const updatedVisit = await db.getFirstAsync(
+        'SELECT * FROM scheduled_visits WHERE id = ?',
+        [visitId]
+      );
+      
+      if (updatedVisit) {
+        // Add to sync queue
+        await SyncQueueService.addToSyncQueue('scheduled_visits', visitId, 'update', {
+          ...updatedVisit,
+          status: 'missed',
+          missed_date: currentDate
+        });
       }
-    };
-    
+      
+      // Refresh scheduled visits
+      loadData();
+      
+      Alert.alert(t('success'), t('visit_marked_missed'));
+    } catch (err) {
+      console.error('Error marking visit as missed:', err);
+      Alert.alert(t('error'), t('error_updating_visit_status'));
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const patientId = route.params?.patientId;
+      const [patientData, visitsData, vaccinationsData, scheduledVisitsData] = await Promise.all([
+        PatientService.getPatientById(patientId),
+        VisitService.getVisitsByPatientId(patientId),
+        VaccinationService.getVaccinationsByPatientId(patientId),
+        db.getAllAsync(
+          `SELECT 
+            sv.id,
+            sv.visit_type,
+            sv.schedule_type,
+            sv.due_date,
+            sv.window_start,
+            sv.window_end,
+            sv.status,
+            sv.completed_date,
+            sv.notification_sent,
+            v.date as visit_date,
+            v.type as visit_type_actual
+           FROM scheduled_visits sv
+           LEFT JOIN visits v ON sv.visit_id = v.id
+           WHERE sv.patient_id = ?
+           ORDER BY sv.due_date ASC`,
+          [patientId]
+        )
+      ]);
+      
+      if (!patientData) {
+        setError(t('patient_data_not_found'));
+        return;
+      }
+      
+      setPatient(patientData);
+      setVisits(visitsData);
+      setVaccinations(vaccinationsData);
+      
+      // Categorize scheduled visits
+      const categorizedVisits = scheduledVisitsData.reduce((acc, visit) => {
+        if (visit.visit_type === 'immunization') {
+          acc.vaccinations.push(visit);
+        } else {
+          acc.regular.push(visit);
+        }
+        return acc;
+      }, { regular: [], vaccinations: [] });
+      
+      setScheduledVisits(categorizedVisits);
+    } catch (error) {
+      console.error('Error loading patient:', error);
+      setError(t('error_loading_patient'));
+      Alert.alert(t('error'), t('error_loading_patient'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
     const unsubscribe = navigation.addListener('focus', loadData);
     return unsubscribe;
   }, [navigation, route.params?.patientId]);
-
-  const { t } = useTranslation();
 
   const renderVisit = (visit) => {
     const date = new Date(visit.date).toLocaleDateString();
@@ -125,20 +200,20 @@ const PatientProfileScreen = ({ navigation, route }) => {
 
   const handleDeletePatient = async () => {
     Alert.alert(
-      t('delete_patient_title', 'Delete Patient'),
-      t('delete_patient_confirm', 'Are you sure you want to delete this patient? This action cannot be undone.'),
+      t('delete_patient_title'),
+      t('delete_patient_confirm'),
       [
-        { text: t('cancel', 'Cancel'), style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: t('delete', 'Delete'),
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await PatientService.deletePatient(patient.id);
-              Alert.alert(t('deleted', 'Deleted'), t('patient_deleted', 'Patient deleted successfully.'));
+              Alert.alert(t('deleted'), t('patient_deleted'));
               navigation.goBack();
             } catch (error) {
-              Alert.alert(t('error', 'Error'), t('delete_patient_error', 'Failed to delete patient.'));
+              Alert.alert(t('error'), t('delete_patient_error'));
             }
           }
         }
@@ -148,6 +223,169 @@ const PatientProfileScreen = ({ navigation, route }) => {
 
   const handleAddVaccination = () => {
     navigation.navigate('AddVaccination', { patient });
+  };
+
+  const handleMarkVisitComplete = async (scheduleId) => {
+    try {
+      // Create a visit record
+      const visitResult = await db.runAsync(
+        `INSERT INTO visits (
+          patient_id, date, type, created_at
+        ) VALUES (?, date('now'), 'general', datetime('now'))`,
+        [patient.id]
+      );
+
+      // Extract the ID from the result, trying different properties based on platform
+      const visitId = visitResult && (
+        visitResult.insertId || 
+        visitResult.lastInsertRowId || 
+        visitResult.lastID || 
+        null
+      );
+
+      // Update scheduled visit status
+      await db.runAsync(
+        `UPDATE scheduled_visits SET 
+         status = ?,
+         completed_date = datetime('now'),
+         visit_id = ?
+         WHERE id = ?`,
+        ['completed', visitId, scheduleId]
+      );
+
+      if (!visitId) {
+        throw new Error(t('error_creating_visit_no_id'));
+      }
+
+      // Add visit to sync queue
+      const SyncQueueService = require('../database/syncQueueService').SyncQueueService;
+      await SyncQueueService.addToSyncQueue('visits', visitId, 'create', {
+        id: visitId,
+        patient_id: patient.id,
+        date: new Date().toISOString(),
+        type: 'general',
+        created_at: new Date().toISOString()
+      });
+
+      // Add scheduled visit update to sync queue
+      if (!scheduleId) {
+        throw new Error('Invalid schedule ID');
+      }
+
+      // Get the full scheduled visit data
+      const scheduledVisit = await db.getFirstAsync(
+        `SELECT * FROM scheduled_visits WHERE id = ?`,
+        [scheduleId]
+      );
+
+      if (!scheduledVisit) {
+        throw new Error('Failed to fetch scheduled visit data');
+      }
+      
+      await SyncQueueService.addToSyncQueue('scheduled_visits', scheduleId, 'update', {
+        ...scheduledVisit,
+        status: 'completed',
+        completed_date: new Date().toISOString(),
+        visit_id: visitId,
+        updated_at: new Date().toISOString()
+      });
+
+      // Create completion notification
+      const notifResult = await db.runAsync(
+        `INSERT INTO notification_queue (
+          patient_id, schedule_id, type, title, message, scheduled_time, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'))`,
+        [
+          patient.id,
+          scheduleId,
+          'completed',
+          'Visit Completed',
+          `Scheduled visit completed for ${patient.name}`,
+          'sent'
+        ]
+      );
+
+      // Extract notification ID using the same pattern as visit ID
+      const notifId = notifResult && (
+        notifResult.insertId || 
+        notifResult.lastInsertRowId || 
+        notifResult.lastID || 
+        null
+      );
+
+      if (!notifId) {
+        throw new Error('Failed to create notification - no ID returned');
+      }
+
+      // Add notification to sync queue
+      await SyncQueueService.addToSyncQueue('notifications', notifId, 'create', {
+        id: notifId,
+        patient_id: patient.id,
+        schedule_id: scheduleId,
+        type: 'completed',
+        title: 'Visit Completed',
+        message: `Scheduled visit completed for ${patient.name}`,
+        scheduled_time: new Date().toISOString(),
+        status: 'sent',
+        created_at: new Date().toISOString()
+      });
+
+      // Trigger immediate sync
+      const { syncManager } = require('../services/syncManager');
+      await syncManager.syncData().catch(e => console.warn('Sync after marking visit complete failed:', e));
+
+      // Refresh data
+      loadData();
+      
+      Alert.alert(t('success'), t('visit_marked_complete'));
+    } catch (error) {
+      console.error('Error marking visit as complete:', error);
+      Alert.alert('Error', 'Failed to mark visit as complete');
+    }
+  };
+  
+  const handleMarkVisitMissed = async (scheduleId) => {
+    try {
+      await db.runAsync(
+        `UPDATE scheduled_visits SET 
+         status = 'missed',
+         completed_date = datetime('now')
+         WHERE id = ?`,
+        [scheduleId]
+      );
+
+      // Get the full scheduled visit data
+      const SyncQueueService = require('../database/syncQueueService').SyncQueueService;
+      
+      const scheduledVisit = await db.getFirstAsync(
+        `SELECT * FROM scheduled_visits WHERE id = ?`,
+        [scheduleId]
+      );
+
+      if (!scheduledVisit) {
+        throw new Error('Failed to fetch scheduled visit data');
+      }
+
+      // Add scheduled visit update to sync queue
+      await SyncQueueService.addToSyncQueue('scheduled_visits', scheduleId, 'update', {
+        ...scheduledVisit,
+        status: 'missed',
+        completed_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Trigger immediate sync
+      const { syncManager } = require('../services/syncManager');
+      await syncManager.syncData().catch(e => console.warn('Sync after marking visit missed failed:', e));
+
+      // Refresh data
+      loadData();
+      
+      Alert.alert(t('success'), t('visit_marked_missed'));
+    } catch (error) {
+      console.error('Error marking visit as missed:', error);
+      Alert.alert('Error', 'Failed to mark visit as missed');
+    }
   };
   
   const renderVaccination = (vaccination) => {
@@ -176,6 +414,46 @@ const PatientProfileScreen = ({ navigation, route }) => {
           <Text style={styles.vaccinationDate}>
             {t('given_label')} {givenDate}
           </Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderScheduledVisit = (visit) => {
+    const dueDate = format(parseISO(visit.due_date), 'PPP');
+    const isOverdue = new Date(visit.due_date) < new Date() && visit.status === 'pending';
+    
+    return (
+      <View style={styles.scheduledVisitCard} key={visit.id}>
+        <View style={styles.scheduledVisitHeader}>
+          <Text style={styles.scheduledVisitType}>{visit.schedule_type}</Text>
+          <Text style={[
+            styles.scheduledVisitStatus,
+            visit.status === 'completed' && styles.statusCompleted,
+            visit.status === 'missed' && styles.statusMissed,
+            isOverdue && styles.statusOverdue
+          ]}>
+            {visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+          </Text>
+        </View>
+        
+        <Text style={styles.scheduledVisitDate}>Due: {dueDate}</Text>
+        
+        {visit.status === 'pending' && (
+          <View style={styles.scheduledVisitActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.completeButton]}
+              onPress={() => handleMarkVisitComplete(visit.id)}
+            >
+              <Text style={styles.actionButtonText}>Mark Complete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.missedButton]}
+              onPress={() => handleMarkVisitMissed(visit.id)}
+            >
+              <Text style={styles.actionButtonText}>Mark Missed</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -237,8 +515,56 @@ const PatientProfileScreen = ({ navigation, route }) => {
             <Text style={styles.actionButtonText}>{t('add_visit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#e74c3c', marginTop: 10 }]} onPress={handleDeletePatient}>
-            <Text style={styles.actionButtonText}>{t('delete_patient', 'Delete Patient')}</Text>
+            <Text style={styles.actionButtonText}>{t('delete_patient_title')}</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderContainer}>
+            <Text style={styles.sectionHeader}>{t('scheduled_visits')}</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleScheduleVisit}
+            >
+              <Text style={styles.addButtonText}>{t('schedule_visit')}</Text>
+            </TouchableOpacity>
+          </View>
+          {scheduledVisits.regular.length === 0 ? (
+            <Text style={styles.emptyText}>{t('no_scheduled_visits')}</Text>
+          ) : (
+            scheduledVisits.regular.map(visit => (
+              <View key={visit.id} style={styles.visitCard}>
+                <View style={styles.visitHeader}>
+                  <Text style={styles.visitDate}>
+                    {format(new Date(visit.due_date), 'PPP')}
+                  </Text>
+                  <View style={[styles.statusBadge, { backgroundColor: visit.status === 'completed' ? '#27ae60' : visit.status === 'missed' ? '#e74c3c' : '#f39c12' }]}>
+                    <Text style={styles.statusText}>
+                      {visit.status === 'completed' ? t('completed') : 
+                       visit.status === 'missed' ? t('missed') : t('pending')}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.visitPurpose}>{visit.schedule_type}</Text>
+                {visit.status === 'pending' && (
+                  <View style={styles.visitActions}>
+                    <TouchableOpacity 
+                      style={[styles.visitButton, { backgroundColor: '#27ae60' }]}
+                      onPress={() => handleMarkVisitComplete(visit.id)}
+                    >
+                      <Text style={styles.visitButtonText}>{t('mark_complete')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.visitButton, { backgroundColor: '#e74c3c' }]}
+                      onPress={() => handleMarkVisitMissed(visit.id)}
+                    >
+                      <Text style={styles.visitButtonText}>{t('mark_missed')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ))
+          )}
         </View>
 
         <View style={styles.section}>
@@ -262,10 +588,44 @@ const PatientProfileScreen = ({ navigation, route }) => {
               <Text style={styles.addButtonText} numberOfLines={1} ellipsizeMode="tail">{t('add_vaccination_button')}</Text>
             </TouchableOpacity>
           </View>
-          {vaccinations.length === 0 ? (
+          {vaccinations.length === 0 && scheduledVisits.vaccinations.length === 0 ? (
             <Text style={styles.emptyText}>{t('no_vaccinations')}</Text>
           ) : (
-            vaccinations.map(vaccination => renderVaccination(vaccination))
+            <>
+              {scheduledVisits.vaccinations.map(visit => (
+                <View key={visit.id} style={[styles.visitCard, { borderColor: '#3498db' }]}>
+                  <View style={styles.visitHeader}>
+                    <Text style={styles.visitDate}>
+                      {format(new Date(visit.due_date), 'PPP')}
+                    </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: visit.status === 'completed' ? '#27ae60' : visit.status === 'missed' ? '#e74c3c' : '#f39c12' }]}>
+                      <Text style={styles.statusText}>
+                        {visit.status === 'completed' ? t('completed') : 
+                         visit.status === 'missed' ? t('missed') : t('scheduled')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.visitPurpose, { color: '#3498db' }]}>{t('scheduled_vaccination')}: {visit.schedule_type}</Text>
+                  {visit.status === 'pending' && (
+                    <View style={styles.visitActions}>
+                      <TouchableOpacity 
+                        style={[styles.visitButton, { backgroundColor: '#27ae60' }]}
+                        onPress={() => handleMarkVisitComplete(visit.id)}
+                      >
+                        <Text style={styles.visitButtonText}>{t('mark_complete')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.visitButton, { backgroundColor: '#e74c3c' }]}
+                        onPress={() => handleMarkVisitMissed(visit.id)}
+                      >
+                        <Text style={styles.visitButtonText}>{t('mark_missed')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
+              {vaccinations.map(vaccination => renderVaccination(vaccination))}
+            </>
           )}
         </View>
       </View>
@@ -379,86 +739,7 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     fontWeight: '600',
   },
-  section: {
-    backgroundColor: '#fff',
-    padding: 24,
-    marginBottom: 24,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  actionButton: {
-    backgroundColor: '#3498db',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 16,
-  },
   visitCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  visitHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  visitDate: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-  },
-  visitType: {
-    fontSize: 14,
-    color: '#3498db',
-    fontWeight: '500',
-  },
-  visitDetail: {
-    fontSize: 14,
-    color: '#2c3e50',
-    marginBottom: 4,
-  },
-  visitNotes: {
-    fontSize: 14,
-    color: '#7f8c8d',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  nextVisit: {
-    fontSize: 14,
-    color: '#27ae60',
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  vaccinationCard: {
     backgroundColor: '#fff',
     padding: 15,
     borderRadius: 8,
@@ -466,50 +747,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
   },
-  vaccinationHeader: {
+  visitHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  vaccineName: {
+  visitDate: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2c3e50',
   },
-  vaccinationStatus: {
-    fontSize: 14,
-    color: '#7f8c8d',
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '500',
   },
-  statusGiven: {
-    color: '#27ae60',
-  },
-  statusOverdue: {
-    color: '#e74c3c',
-  },
-  vaccinationDate: {
+  visitPurpose: {
     fontSize: 14,
     color: '#7f8c8d',
-    marginTop: 4,
+    marginBottom: 12,
   },
-  infoRow: {
+  visitActions: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
-  infoLabel: {
-    width: 120,
-    fontSize: 16,
-    color: '#7f8c8d',
+  visitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  visitButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '500',
-  },
-  infoValue: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2c3e50',
-    fontWeight: '600',
   },
   actionButton: {
     backgroundColor: '#3498db',

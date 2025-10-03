@@ -36,11 +36,11 @@ class SyncManager {
     return (now - this.syncStartTime) > this.SYNC_TIMEOUT;
   }
 
-  async syncData() {
+  async syncData(forceSync = false) {
     // Check for timeout of previous sync
     if (this.isSyncing) {
-      if (this.checkSyncTimeout()) {
-        console.log('Previous sync timed out, resetting lock');
+      if (forceSync || this.checkSyncTimeout()) {
+        console.log(forceSync ? 'Force sync requested, resetting lock' : 'Previous sync timed out, resetting lock');
         this.clearSyncLock();
       } else {
         console.log('Sync already in progress');

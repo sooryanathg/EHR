@@ -200,14 +200,28 @@ export const FirestoreSync = {
       }
 
       const schedulesRef = collection(db, 'scheduled_visits');
-      const docRef = schedule.firestore_id
-        ? doc(db, 'scheduled_visits', schedule.firestore_id)
-        : doc(schedulesRef);
+      let docRef;
+
+      // Try to find existing document by local_id if no firestore_id
+      if (!schedule.firestore_id) {
+        const q = query(collection(db, 'scheduled_visits'), where('local_id', '==', schedule.id));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          docRef = doc(db, 'scheduled_visits', snap.docs[0].id);
+          schedule.firestore_id = snap.docs[0].id;
+        } else {
+          docRef = doc(schedulesRef);
+        }
+      } else {
+        docRef = doc(db, 'scheduled_visits', schedule.firestore_id);
+      }
 
       const ashaId = getAshaUidOrThrow(schedule);
       const scheduleData = {
         ...schedule,
+        local_id: schedule.id,
         asha_id: ashaId,
+        status: schedule.status || 'pending',
         updated_at: new Date().toISOString(),
         created_at: schedule.created_at || new Date().toISOString(),
       };

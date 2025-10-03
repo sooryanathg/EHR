@@ -15,13 +15,13 @@ import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { PatientService } from '../database/patientService';
 import { AuthService } from '../auth/authService';
+import AppHeader from '../components/AppHeader';
 
 const PatientListScreen = ({ navigation }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showLangModal, setShowLangModal] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -31,40 +31,15 @@ const PatientListScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-  // Ensure the Logout (and Add) buttons appear in the native navigation header
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
-          <TouchableOpacity
-            style={[styles.addButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
-            onPress={() => navigation.navigate('AddPatient')}
-          >
-            <Text style={styles.addButtonText}>{t('add_button')}</Text>
-          </TouchableOpacity>
-
-          {/* Language button - opens modal with language options */}
-          <TouchableOpacity
-            style={[styles.langButtonHeader, { marginLeft: 8 }]}
-            onPress={() => setShowLangModal(true)}
-          >
-            <Text style={[styles.langTextHeader]}>{i18n.language === 'hi' ? 'हिं' : i18n.language === 'ta' ? 'த' : i18n.language === 'ml' ? 'മ' : 'EN'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.addButton, styles.logoutButton, { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
-            onPress={async () => {
-              const ok = await AuthService.logout();
-              if (ok) navigation.replace('Login');
-              else Alert.alert('Error', 'Logout failed');
-            }}
-          >
-            <Text style={styles.addButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      ),
+      header: (props) => <AppHeader {...props} navigation={navigation} />,
+      headerShown: true,
+      headerStyle: {
+        height: 'auto',
+      },
     });
-  }, [navigation, i18n.language]);
+  }, [navigation]);
 
   const load = async () => {
     try {
@@ -125,40 +100,7 @@ const PatientListScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>{t('patients_title')}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddPatient')}
-          >
-            <Text style={styles.addButtonText}>{t('add_button')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      {/* Logout button at bottom left */}
-      <TouchableOpacity
-        style={styles.logoutFAB}
-        onPress={async () => {
-          try {
-            const ok = await AuthService.logout();
-            if (ok) {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
-            } else {
-              Alert.alert('Error', 'Logout failed');
-            }
-          } catch (error) {
-            Alert.alert('Error', 'Logout failed: ' + error.message);
-          }
-        }}
-      >
-        <Text style={styles.logoutFABText}>Logout</Text>
-      </TouchableOpacity>
+
 
       <View style={styles.searchWrap}>
         <TextInput
@@ -171,37 +113,7 @@ const PatientListScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Language selection modal */}
-      <Modal
-        visible={showLangModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLangModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLangModal(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Language</Text>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('en'); setShowLangModal(false); }}
-            >
-              <Text style={[styles.modalItemText, i18n.language === 'en' && styles.modalItemActive]}>English (EN)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('hi'); setShowLangModal(false); }}
-            >
-              <Text style={[styles.modalItemText, i18n.language === 'hi' && styles.modalItemActive]}>हिंदी (HI)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => { i18n.changeLanguage('ta'); setShowLangModal(false); }}
-            >
-              <Text style={[styles.modalItemText, i18n.language === 'ta' && styles.modalItemActive]}>தமிழ் (TA)</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+
 
       {patients.length === 0 ? (
         <View style={styles.emptyContainer}>

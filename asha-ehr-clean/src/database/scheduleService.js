@@ -94,6 +94,10 @@ export const createPregnancySchedule = async (patientId, lmpDate) => {
                 };
                 await SyncQueueService.addToSyncQueue('scheduled_visits', svId, 'create', fullSchedule);
                 console.log('Enqueued scheduled_visit id ->', svId, 'to sync queue');
+                
+                // Trigger immediate sync
+                const SyncManager = require('../services/syncManager').SyncManager;
+                await SyncManager.getInstance().syncData(true);
               }
             } catch (e) {
               console.warn('Failed to add scheduled_visit to sync queue', e.message);
@@ -185,6 +189,10 @@ export const createPregnancySchedule = async (patientId, lmpDate) => {
               };
               await SyncQueueService.addToSyncQueue('scheduled_visits', svId, 'create', fullSchedule);
               console.log('Enqueued scheduled_visit id ->', svId, 'to sync queue');
+              
+              // Trigger immediate sync
+              const SyncManager = require('../services/syncManager').SyncManager;
+              await SyncManager.getInstance().syncData(true);
             }
           } catch (e) {
             console.warn('Failed to add scheduled_visit to sync queue', e.message);
@@ -277,6 +285,10 @@ export const createVisitNotifications = async (patientId) => {
                   created_at: new Date().toISOString()
                 };
                 await SyncQueueService.addToSyncQueue('notifications', notifId, 'create', fullNotif);
+                
+                // Trigger immediate sync for notification
+                const SyncManager = require('../services/syncManager').SyncManager;
+                await SyncManager.getInstance().syncData(true);
               }
             }
           } catch (err) {
@@ -313,6 +325,10 @@ export const createVisitNotifications = async (patientId) => {
                     created_at: new Date().toISOString()
                   };
                   await SyncQueueService.addToSyncQueue('notifications', notifId, 'create', fullNotif);
+                  
+                  // Trigger immediate sync for notification (OS-fallback case)
+                  const SyncManager = require('../services/syncManager').SyncManager;
+                  await SyncManager.getInstance().syncData(true);
                 }
               }
             } catch (e) {
@@ -352,6 +368,11 @@ export const createVisitNotifications = async (patientId) => {
                   created_at: new Date().toISOString()
                 };
                 await SyncQueueService.addToSyncQueue('notifications', notifId, 'create', fullNotif);
+                
+                // Trigger immediate sync for past-due notification
+                const SyncManager = require('../services/syncManager').SyncManager;
+                await SyncManager.getInstance().syncData(true);
+                
                 console.log('Inserted past-due notification_queue id ->', notifId, 'for patient', patientId, 'schedule', visit.id);
               }
             }

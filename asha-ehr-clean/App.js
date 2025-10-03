@@ -30,6 +30,7 @@ import AddVisitScreen from './src/screens/AddVisitScreen';
 import AddVaccinationScreen from './src/screens/AddVaccinationScreen';
 import RemindersScreen from './src/screens/RemindersScreen';
 import TodayVisitsScreen from './src/screens/TodayVisitsScreen';
+import ScheduleVisitScreen from './src/screens/ScheduleVisitScreen';
 import NetInfo from '@react-native-community/netinfo';
 import { syncManager } from './src/services/syncManager';
 import { auth } from './src/lib/firebase';
@@ -185,12 +186,18 @@ export default function App() {
           <Stack.Navigator 
                 initialRouteName="Login"
                 screenOptions={{
+                  headerShown: false // Disable default headers globally
+                }}
+              >
+              <Stack.Screen 
+                name="Login" 
+                component={LoginScreen}
+                options={{
                   headerShown: true,
                   headerStyle: { backgroundColor: '#fff' },
                   headerTintColor: '#2c3e50',
                 }}
-              >
-              <Stack.Screen name="Login" component={LoginScreen} />
+              />
               <Stack.Screen name="PatientList" component={PatientListScreen} options={{ headerShown: false }} />
               <Stack.Screen name="AddPatient" component={AddPatientScreen} />
               <Stack.Screen name="PatientProfile" component={PatientProfileScreen} />
@@ -198,6 +205,7 @@ export default function App() {
               <Stack.Screen name="AddVaccination" component={AddVaccinationScreen} />
               <Stack.Screen name="Reminders" component={RemindersScreen} />
               <Stack.Screen name="TodayVisits" component={TodayVisitsScreen} />
+              <Stack.Screen name="ScheduleVisit" component={ScheduleVisitScreen} />
             </Stack.Navigator>
         </NavigationContainer>
       </View>
