@@ -130,50 +130,13 @@ const LoginScreen = ({ navigation }) => {
             secureTextEntry
           />
 
-          {/* Confirm password only shown in registration mode below */}
-
-          {!isRegistering ? (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.loginButton]}
-                onPress={handleLogin}
-              >
-                <Text style={styles.buttonText}>Login</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.setupButton]}
-                onPress={() => setIsRegistering(true)}
-              >
-                <Text style={styles.setupButtonText}>Register (ASHA)</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirm password"
-                secureTextEntry
-              />
-
-              <TouchableOpacity
-                style={[styles.button, styles.loginButton]}
-                onPress={handleRegister}
-              >
-                <Text style={styles.buttonText}>Complete Registration</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.setupButton]}
-                onPress={() => setIsRegistering(false)}
-              >
-                <Text style={styles.setupButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          )}
+          {/* Only show login, registration is disabled */}
+          <TouchableOpacity
+            style={[styles.button, styles.loginButton]}
+            onPress={handleLogin}
+          >
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
