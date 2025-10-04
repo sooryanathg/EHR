@@ -9,6 +9,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import VoiceInput from '../components/VoiceInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { VisitService } from '../database/visitService';
 import { useTranslation } from 'react-i18next';
@@ -165,7 +166,7 @@ const AddVisitScreen = ({ navigation, route }) => {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>{t('notes')}</Text>
-          <TextInput
+          <VoiceInput
             style={[styles.input, styles.textArea]}
             value={formData.notes}
             onChangeText={(value) => setFormData(prev => ({ ...prev, notes: value }))}

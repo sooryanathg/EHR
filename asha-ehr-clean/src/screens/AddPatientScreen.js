@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PatientService } from '../database/patientService';
+
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
   Alert,
   ScrollView
 } from 'react-native';
+import VoiceInput from '../components/VoiceInput';
 
 const AddPatientScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -77,7 +79,7 @@ const AddPatientScreen = ({ navigation }) => {
       <View style={styles.form}>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Patient Name *</Text>
-          <TextInput
+          <VoiceInput
             style={styles.input}
             value={formData.name}
             onChangeText={(value) => setFormData(prev => ({ ...prev, name: value }))}
@@ -98,7 +100,7 @@ const AddPatientScreen = ({ navigation }) => {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Village *</Text>
-          <TextInput
+          <VoiceInput
             style={styles.input}
             value={formData.village}
             onChangeText={(value) => setFormData(prev => ({ ...prev, village: value }))}
