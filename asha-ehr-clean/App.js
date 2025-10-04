@@ -10,6 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView as RN_SafeAreaView, TouchableOpacity } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from './src/utils/toastConfig';
 // Try to load react-native-safe-area-context at runtime; fall back to RN's SafeAreaView if unavailable
 let SafeAreaProvider = null;
 let SafeAreaView = RN_SafeAreaView;

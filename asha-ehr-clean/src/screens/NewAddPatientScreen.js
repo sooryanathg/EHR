@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PatientService } from '../database/patientService';
 import { syncManager } from '../services/syncManager';
-import { 
-  createPregnancySchedule, 
+import {
+  createPregnancySchedule,
   createImmunizationSchedule,
-  setupNotificationCheck 
+  setupNotificationCheck,
 } from '../database/scheduleService';
 import {
   View,
@@ -13,15 +13,16 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ScrollView,
-  Platform
+  Platform,
 } from 'react-native';
+import { showSuccess, showError } from '../utils/alerts';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const NewAddPatientScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const i18n = require('i18next');
+
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -38,86 +39,52 @@ const NewAddPatientScreen = ({ navigation }) => {
     // Child details
     dob: '',
     weight: '',
-    parent_name: ''
+    parent_name: '',
   });
 
   const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      Alert.alert(t('error'), t('enter_name'));
-      return false;
-    }
-    if (!formData.age || isNaN(parseInt(formData.age, 10))) {
-      Alert.alert(t('error'), t('enter_age'));
-      return false;
-    }
-    if (!formData.type) {
-      Alert.alert(t('error'), t('select_type'));
-      return false;
-    }
-    if (!formData.village.trim()) {
-      Alert.alert(t('error'), t('enter_village'));
-      return false;
-    }
-    
-    // Validate pregnancy details
-    if (formData.type === 'pregnant') {
-      if (!formData.lmp_date) {
-        Alert.alert(t('error'), t('enter_lmp_date'));
-        return false;
-      }
-      if (!formData.gravida || isNaN(parseInt(formData.gravida, 10))) {
-        Alert.alert(t('error'), t('enter_gravida'));
-        return false;
-      }
-      if (!formData.parity || isNaN(parseInt(formData.parity, 10))) {
-        Alert.alert(t('error'), t('enter_parity'));
-        return false;
-      }
-    }
-    
-    // Validate child details
-    if (formData.type === 'child') {
-      if (!formData.dob) {
-        Alert.alert(t('error'), t('enter_dob'));
-        return false;
-      }
-      if (!formData.weight || isNaN(parseFloat(formData.weight))) {
-        Alert.alert(t('error'), t('enter_weight'));
-        return false;
-      }
-      if (!formData.parent_name.trim()) {
-        Alert.alert(t('error'), t('enter_parent_name'));
-        return false;
-      }
-    }
-    
-    return true;
-  };
-
-  const handleTypeSelect = (type) => {
-    console.log('Selected type:', type);
-    setSelectedType(type);
-    setFormData(prev => ({ ...prev, type }));
-  };
-
-  // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerField, setDatePickerField] = useState(null);
 
   useEffect(() => {
-    // Set up notifications when component mounts
     setupNotificationCheck();
   }, []);
+
+  const validateForm = () => {
+    if (!formData.name.trim()) return showError('enter_name');
+    if (!formData.age || isNaN(parseInt(formData.age, 10))) return showError('enter_age');
+    if (!formData.type) return showError('select_type');
+    if (!formData.village.trim()) return showError('enter_village');
+
+    if (formData.type === 'pregnant') {
+      if (!formData.lmp_date) return showError('enter_lmp_date');
+      if (!formData.gravida || isNaN(parseInt(formData.gravida, 10)))
+        return showError('enter_gravida');
+      if (!formData.parity || isNaN(parseInt(formData.parity, 10)))
+        return showError('enter_parity');
+    }
+
+    if (formData.type === 'child') {
+      if (!formData.dob) return showError('enter_dob');
+      if (!formData.weight || isNaN(parseFloat(formData.weight))) return showError('enter_weight');
+      if (!formData.parent_name.trim()) return showError('enter_parent_name');
+    }
+
+    return true;
+  };
+
+  const handleTypeSelect = (type) => {
+    setSelectedType(type);
+    setFormData((prev) => ({ ...prev, type }));
+  };
 
   const handleDateChange = (event, date) => {
     setShowDatePicker(false);
     if (date) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [datePickerField]: date.toISOString().split('T')[0]
+        [datePickerField]: date.toISOString().split('T')[0],
       }));
     }
   };
@@ -128,12 +95,10 @@ const NewAddPatientScreen = ({ navigation }) => {
   };
 
   const handleSave = async () => {
-    console.log('Saving form data:', formData);
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      // Create basic patient record
       const patientData = {
         name: formData.name.trim(),
         age: parseInt(formData.age, 10),
@@ -145,52 +110,39 @@ const NewAddPatientScreen = ({ navigation }) => {
         aadhar: formData.aadhar.trim() || null,
       };
 
-      // Add type-specific fields
-      if (formData.type === 'child') {
-        patientData.dob = formData.dob;
-      }
+      if (formData.type === 'child') patientData.dob = formData.dob;
 
-      // Create patient
       const patientId = await PatientService.createPatient(patientData);
       console.log('Patient created, id=', patientId);
 
-      // Create schedules based on patient type (non-blocking, log errors)
       try {
         if (formData.type === 'pregnant') {
-          await createPregnancySchedule(
-            patientId,
-            formData.lmp_date
-          );
+          await createPregnancySchedule(patientId, formData.lmp_date);
         } else if (formData.type === 'child') {
-          await createImmunizationSchedule(
-            patientId,
-            formData.dob
-          );
+          await createImmunizationSchedule(patientId, formData.dob);
         }
       } catch (schedErr) {
-        // Log schedule creation error but don't block the user flow
-        console.warn('Schedule creation failed for patient', patientId, schedErr.message || schedErr);
+        console.warn('Schedule creation failed:', schedErr.message || schedErr);
       }
 
-      Alert.alert(t('success'), t('patient_added'), [
-        { text: t('ok'), onPress: () => navigation.goBack() }
-      ]);
+      showSuccess('patient_added', {
+        buttons: [{ text: t('ok'), onPress: () => navigation.goBack() }],
+      });
     } catch (e) {
       console.error('Error saving patient:', e);
-      Alert.alert(t('error'), t('failed_save') + ': ' + e.message);
+      showError('failed_save', { message: e.message });
     } finally {
       setLoading(false);
     }
   };
 
   const handleManualSync = async () => {
-    console.log('Manual sync triggered from UI');
     try {
       await syncManager.syncData();
-      Alert.alert(t('success'), 'Sync completed (check logs for details)');
+      showSuccess('sync_completed', { message: 'Check logs for details' });
     } catch (e) {
       console.warn('Manual sync failed:', e);
-      Alert.alert(t('error'), 'Sync failed: ' + (e.message || String(e)));
+      showError('sync_failed', { message: e.message || String(e) });
     }
   };
 
@@ -202,11 +154,13 @@ const NewAddPatientScreen = ({ navigation }) => {
             <Text style={styles.syncButtonText}>Sync Now</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Common Fields */}
         <Text style={styles.label}>{t('name')} *</Text>
         <TextInput
           style={styles.input}
           value={formData.name}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, name: text }))}
           placeholder={t('name')}
         />
 
@@ -214,46 +168,36 @@ const NewAddPatientScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           value={formData.age}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, age: text }))}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, age: text }))}
           placeholder={t('age')}
           keyboardType="numeric"
         />
 
         <Text style={styles.label}>{t('type')} *</Text>
         <View style={styles.typeContainer}>
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'pregnant' && styles.selectedType]}
-            onPress={() => handleTypeSelect('pregnant')}
-          >
-            <Text style={[styles.typeButtonText, selectedType === 'pregnant' && styles.selectedTypeText]}>
-              {t('pregnant')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'lactating' && styles.selectedType]}
-            onPress={() => handleTypeSelect('lactating')}
-          >
-            <Text style={[styles.typeButtonText, selectedType === 'lactating' && styles.selectedTypeText]}>
-              {t('lactating')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.typeButton, selectedType === 'child' && styles.selectedType]}
-            onPress={() => handleTypeSelect('child')}
-          >
-            <Text style={[styles.typeButtonText, selectedType === 'child' && styles.selectedTypeText]}>
-              {t('child')}
-            </Text>
-          </TouchableOpacity>
+          {['pregnant', 'lactating', 'child'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.typeButton, selectedType === type && styles.selectedType]}
+              onPress={() => handleTypeSelect(type)}
+            >
+              <Text
+                style={[
+                  styles.typeButtonText,
+                  selectedType === type && styles.selectedTypeText,
+                ]}
+              >
+                {t(type)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <Text style={styles.label}>{t('village')} *</Text>
         <TextInput
           style={styles.input}
           value={formData.village}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, village: text }))}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, village: text }))}
           placeholder={t('village')}
         />
 
@@ -261,16 +205,16 @@ const NewAddPatientScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           value={formData.health_id}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, health_id: text }))}
-          placeholder={t('health_id') + ' (' + t('optional') + ')'}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, health_id: text }))}
+          placeholder={`${t('health_id')} (${t('optional')})`}
         />
 
         <Text style={styles.label}>{t('phone')}</Text>
         <TextInput
           style={styles.input}
           value={formData.phone}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text }))}
-          placeholder={t('phone') + ' (' + t('optional') + ')'}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, phone: text }))}
+          placeholder={`${t('phone')} (${t('optional')})`}
           keyboardType="phone-pad"
         />
 
@@ -278,8 +222,8 @@ const NewAddPatientScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           value={formData.aadhar}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, aadhar: text }))}
-          placeholder={t('aadhar') + ' (' + t('optional') + ')'}
+          onChangeText={(text) => setFormData((prev) => ({ ...prev, aadhar: text }))}
+          placeholder={`${t('aadhar')} (${t('optional')})`}
           keyboardType="numeric"
         />
 
@@ -287,7 +231,7 @@ const NewAddPatientScreen = ({ navigation }) => {
         {selectedType === 'pregnant' && (
           <View>
             <Text style={styles.sectionTitle}>{t('pregnancy_details')}</Text>
-            
+
             <Text style={styles.label}>{t('lmp_date')} *</Text>
             <TouchableOpacity
               style={styles.dateButton}
@@ -302,7 +246,7 @@ const NewAddPatientScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               value={formData.gravida}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, gravida: text }))}
+              onChangeText={(text) => setFormData((prev) => ({ ...prev, gravida: text }))}
               placeholder={t('gravida')}
               keyboardType="numeric"
             />
@@ -311,7 +255,7 @@ const NewAddPatientScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               value={formData.parity}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, parity: text }))}
+              onChangeText={(text) => setFormData((prev) => ({ ...prev, parity: text }))}
               placeholder={t('parity')}
               keyboardType="numeric"
             />
@@ -319,7 +263,9 @@ const NewAddPatientScreen = ({ navigation }) => {
             <View style={styles.checkboxContainer}>
               <TouchableOpacity
                 style={[styles.checkbox, formData.high_risk && styles.checkboxChecked]}
-                onPress={() => setFormData(prev => ({ ...prev, high_risk: !prev.high_risk }))}
+                onPress={() =>
+                  setFormData((prev) => ({ ...prev, high_risk: !prev.high_risk }))
+                }
               />
               <Text style={styles.checkboxLabel}>{t('high_risk_pregnancy')}</Text>
             </View>
@@ -345,7 +291,7 @@ const NewAddPatientScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               value={formData.weight}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
+              onChangeText={(text) => setFormData((prev) => ({ ...prev, weight: text }))}
               placeholder={t('weight_in_kg')}
               keyboardType="decimal-pad"
             />
@@ -354,7 +300,7 @@ const NewAddPatientScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               value={formData.parent_name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, parent_name: text }))}
+              onChangeText={(text) => setFormData((prev) => ({ ...prev, parent_name: text }))}
               placeholder={t('parent_name')}
             />
           </View>
@@ -365,7 +311,9 @@ const NewAddPatientScreen = ({ navigation }) => {
           onPress={handleSave}
           disabled={loading}
         >
-          <Text style={styles.saveButtonText}>{loading ? t('saving') : t('save')}</Text>
+          <Text style={styles.saveButtonText}>
+            {loading ? t('saving') : t('save')}
+          </Text>
         </TouchableOpacity>
 
         {showDatePicker && (
@@ -383,14 +331,8 @@ const NewAddPatientScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  form: {
-    padding: 20,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  form: { padding: 20, backgroundColor: '#fff' },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -401,12 +343,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     paddingBottom: 5,
   },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#34495e',
-    fontWeight: '600',
-  },
+  label: { fontSize: 16, marginBottom: 5, color: '#34495e', fontWeight: '600' },
   input: {
     backgroundColor: '#fff',
     padding: 12,
@@ -430,16 +367,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 4,
   },
-  selectedType: {
-    backgroundColor: '#3498db',
-  },
-  typeButtonText: {
-    color: '#3498db',
-    fontWeight: '600',
-  },
-  selectedTypeText: {
-    color: '#fff',
-  },
+  selectedType: { backgroundColor: '#3498db' },
+  typeButtonText: { color: '#3498db', fontWeight: '600' },
+  selectedTypeText: { color: '#fff' },
   saveButton: {
     backgroundColor: '#2ecc71',
     padding: 15,
@@ -447,14 +377,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  disabledButton: {
-    backgroundColor: '#95a5a6',
-  },
+  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  disabledButton: { backgroundColor: '#95a5a6' },
   dateButton: {
     backgroundColor: '#f5f5f5',
     padding: 12,
@@ -463,15 +387,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  dateButtonText: {
-    color: '#34495e',
-    fontSize: 16,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
+  dateButtonText: { color: '#34495e', fontSize: 16 },
+  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
   checkbox: {
     width: 24,
     height: 24,
@@ -482,28 +399,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: '#3498db',
-  },
-  checkboxLabel: {
-    fontSize: 16,
-    color: '#34495e',
-  },
-  syncRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 12,
-  },
+  checkboxChecked: { backgroundColor: '#3498db' },
+  checkboxLabel: { fontSize: 16, color: '#34495e' },
+  syncRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
   syncButton: {
     backgroundColor: '#3498db',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  syncButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  syncButtonText: { color: '#fff', fontWeight: '600' },
 });
 
 export default NewAddPatientScreen;

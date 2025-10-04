@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import Toast from 'react-native-toast-message';
 import db from '../database/schema';
+import { formatRemindersDate, getRelativeDays } from '../utils/toastConfig';
 
 // This screen reads local SQLite to find upcoming next_visit and due_date within the next N days
 const RemindersScreen = ({ navigation }) => {
@@ -71,9 +73,28 @@ const RemindersScreen = ({ navigation }) => {
           data={visitReminders}
           keyExtractor={(item) => `visit-${item.id}`}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PatientProfile', { patientId: item.patient_id })}>
-              <Text style={styles.cardTitle}>{item.patient_name}</Text>
-              <Text style={styles.cardMeta}>{item.patient_village} • {item.next_visit}</Text>
+            <TouchableOpacity 
+              style={[styles.card, { borderLeftWidth: 4, borderLeftColor: '#3498db' }]} 
+              onPress={() => {
+                navigation.navigate('PatientProfile', { patientId: item.patient_id });
+                Toast.show({
+                  type: 'info',
+                  text1: item.patient_name,
+                  text2: `Visit scheduled ${getRelativeDays(item.next_visit)}`,
+                });
+              }}
+            >
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{item.patient_name}</Text>
+                <Text style={styles.cardMeta}>
+                  <Text style={styles.village}>{item.patient_village}</Text>
+                  {' • '}
+                  <Text style={styles.date}>{formatRemindersDate(item.next_visit)}</Text>
+                </Text>
+              </View>
+              <View style={styles.chevron}>
+                <Text style={styles.chevronText}>›</Text>
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -87,9 +108,29 @@ const RemindersScreen = ({ navigation }) => {
           data={vacReminders}
           keyExtractor={(item) => `vac-${item.id}`}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('PatientProfile', { patientId: item.patient_id })}>
-              <Text style={styles.cardTitle}>{item.patient_name}</Text>
-              <Text style={styles.cardMeta}>{item.patient_village} • {item.due_date} • {item.vaccine_name}</Text>
+            <TouchableOpacity 
+              style={[styles.card, { borderLeftWidth: 4, borderLeftColor: '#e74c3c' }]}
+              onPress={() => {
+                navigation.navigate('PatientProfile', { patientId: item.patient_id });
+                Toast.show({
+                  type: 'warning',
+                  text1: `${item.vaccine_name} Vaccination`,
+                  text2: `Due ${getRelativeDays(item.due_date)} for ${item.patient_name}`,
+                });
+              }}
+            >
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{item.patient_name}</Text>
+                <Text style={styles.vaccineName}>{item.vaccine_name}</Text>
+                <Text style={styles.cardMeta}>
+                  <Text style={styles.village}>{item.patient_village}</Text>
+                  {' • '}
+                  <Text style={styles.date}>{formatRemindersDate(item.due_date)}</Text>
+                </Text>
+              </View>
+              <View style={styles.chevron}>
+                <Text style={styles.chevronText}>›</Text>
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -99,16 +140,106 @@ const RemindersScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#2c3e50' },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 8 },
-  todayButton: { backgroundColor: '#3498db', padding: 10, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 12 },
-  todayButtonText: { color: '#fff', fontWeight: '600' },
-  card: { backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#eee' },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  cardMeta: { fontSize: 13, color: '#7f8c8d', marginTop: 4 },
-  empty: { color: '#7f8c8d', fontSize: 14, marginBottom: 12 }
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#2c3e50',
+    letterSpacing: 0.5,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 12,
+    color: '#34495e',
+  },
+  todayButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  todayButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  vaccineName: {
+    fontSize: 15,
+    color: '#e74c3c',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  cardMeta: {
+    fontSize: 13,
+    color: '#7f8c8d',
+  },
+  village: {
+    color: '#34495e',
+    fontWeight: '500',
+  },
+  date: {
+    color: '#7f8c8d',
+  },
+  empty: {
+    color: '#95a5a6',
+    fontSize: 15,
+    marginBottom: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  chevron: {
+    marginLeft: 8,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chevronText: {
+    fontSize: 24,
+    color: '#bdc3c7',
+    fontWeight: '300',
+  }
 });
 
 export default RemindersScreen;
