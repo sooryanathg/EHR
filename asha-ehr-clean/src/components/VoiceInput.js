@@ -1,22 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, PermissionsAndroid, Platform, NativeModules } from 'react-native';
 import Voice from '@react-native-voice/voice';
 
-const isVoiceAvailable = NativeModules.Voice !== null;
+// Debug check for native module
+console.log('Native Voice module:', NativeModules.Voice);
 
 const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 	const [isRecording, setIsRecording] = useState(false);
 	const [error, setError] = useState(null);
+	const [isInitialized, setIsInitialized] = useState(false);
 
 	useEffect(() => {
-		if (!isVoiceAvailable) {
-			setError('Voice recognition is not available in Expo Go. Please use a development build.');
-			return;
-		}
-		Voice.onSpeechResults = onSpeechResults;
-		Voice.onSpeechError = onSpeechError;
+		let isMounted = true;
+
+		const initializeVoice = async () => {
+			try {
+				// Check native module availability
+				if (!NativeModules.Voice) {
+					throw new Error('Native voice module is not available');
+				}
+
+				// Wait briefly for native module initialization
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				// Set up event handlers
+				Voice.onSpeechStart = () => isMounted && setIsRecording(true);
+				Voice.onSpeechEnd = () => isMounted && setIsRecording(false);
+				Voice.onSpeechResults = onSpeechResults;
+				Voice.onSpeechError = onSpeechError;
+
+				// Wait a moment for initialization
+				await new Promise(resolve => setTimeout(resolve, 100));
+				
+				if (isMounted) {
+					setIsInitialized(true);
+					console.log('Voice initialized successfully');
+				}
+			} catch (error) {
+				console.error('Error initializing Voice:', error);
+				if (isMounted) {
+					setError('Error initializing voice recognition');
+				}
+			}
+		};
+
+		initializeVoice();
+
 		return () => {
-			Voice.destroy().then(Voice.removeAllListeners);
+			isMounted = false;
+			try {
+				Voice.cancel();
+			} catch (e) {
+				console.log('Error cleaning up Voice:', e);
+			}
 		};
 	}, []);
 
@@ -28,7 +64,8 @@ const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 	};
 
 	const onSpeechError = (e) => {
-		setError(e.error.message);
+		console.log('Speech error:', e);
+		setError(e?.error?.message || 'Speech recognition failed');
 		setIsRecording(false);
 	};
 
@@ -52,25 +89,42 @@ const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 	};
 
 	const startRecording = async () => {
-		setError(null);
-		setIsRecording(true);
-		if (!isVoiceAvailable) {
-			setError('Voice recognition is not available. Please use a development build.');
-			setIsRecording(false);
-			return;
-		}
-
-		if (Platform.OS === 'android') {
-			const hasPermission = await requestAudioPermission();
-			if (!hasPermission) {
-				setError('Microphone permission denied');
-				setIsRecording(false);
-				return;
-			}
-		}
-
 		try {
-			await Voice.start('en-US');
+			setError(null);
+			
+			// Check for native module
+			if (!NativeModules.Voice) {
+				throw new Error('Native voice module is not available');
+			}
+
+			if (!isInitialized) {
+				throw new Error('Voice recognition is not initialized yet');
+			}
+
+			if (Platform.OS === 'android') {
+				const hasPermission = await requestAudioPermission();
+				if (!hasPermission) {
+					throw new Error('Microphone permission denied');
+				}
+			}
+
+			// Attempt to start voice recognition
+			console.log('Starting voice recognition...');
+			setIsRecording(true);
+			
+			// Wait briefly for native module to be ready
+			await new Promise(resolve => setTimeout(resolve, 300));
+			
+			try {
+				await Voice.start('en-US');
+				console.log('Voice recognition started successfully');
+			} catch (e) {
+				console.error('Error starting voice recognition:', e);
+				if (e.message.includes('startSpeech')) {
+					throw new Error('Voice recognition service is not responding. Please try again.');
+				}
+				throw e;
+			}
 		} catch (e) {
 			setError(e.message);
 			setIsRecording(false);
