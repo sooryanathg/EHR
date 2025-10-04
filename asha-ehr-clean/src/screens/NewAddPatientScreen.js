@@ -194,35 +194,12 @@ const NewAddPatientScreen = ({ navigation }) => {
     }
   };
 
-  const handleDebugSyncState = async () => {
-    try {
-      console.log('---- SYNC QUEUE DUMP ----');
-      const db = require('../database/schema').default;
-      const sq = await db.getAllAsync(`SELECT * FROM sync_queue ORDER BY id DESC LIMIT 50`);
-      console.log('sync_queue rows:', sq);
-
-      console.log('---- NOTIFICATION_QUEUE DUMP ----');
-      const nq = await db.getAllAsync(`SELECT * FROM notification_queue ORDER BY id DESC LIMIT 50`);
-      console.log('notification_queue rows:', nq);
-
-      // Then trigger a manual sync
-      await syncManager.syncData();
-      Alert.alert(t('success'), 'Debug dump logged and sync attempted. Check console/logs.');
-    } catch (e) {
-      console.error('Debug sync state failed:', e);
-      Alert.alert(t('error'), 'Debug failed: ' + (e.message || String(e)));
-    }
-  };
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.form}>
         <View style={styles.syncRow}>
           <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
             <Text style={styles.syncButtonText}>Sync Now</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.syncButton, { marginLeft: 10, backgroundColor: '#f39c12' }]} onPress={handleDebugSyncState}>
-            <Text style={styles.syncButtonText}>Debug Sync State</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.label}>{t('name')} *</Text>

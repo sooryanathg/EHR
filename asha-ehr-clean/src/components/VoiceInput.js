@@ -12,19 +12,54 @@ import {
   Linking
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useTranslation } from 'react-i18next';
+
+// Language display configuration
+const languageNames = {
+  'en-IN': 'EN',
+  'hi-IN': 'हि',
+  'ta-IN': 'த',
+  'ml-IN': 'മ'
+};
 
 const VoiceInput = ({ 
   value, 
   onChangeText, 
   placeholder, 
   style,
-  language = 'en-US',
   ...props 
 }) => {
+  const { t, i18n } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState(null);
   const [showWebView, setShowWebView] = useState(false);
   const webViewRef = useRef(null);
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+
+  // Effect to handle language changes
+  useEffect(() => {
+    if (i18n.language !== selectedLanguage) {
+      setSelectedLanguage(i18n.language);
+      if (isRecording) {
+        stopRecording();
+      }
+    }
+  }, [i18n.language]);
+
+  // Map app languages to speech recognition language codes
+  const languageMap = {
+    'en': 'en-IN',  // English (India)
+    'hi': 'hi-IN',  // Hindi
+    'ta': 'ta-IN',  // Tamil
+    'ml': 'ml-IN'   // Malayalam
+  };
+
+  const currentLanguage = languageMap[i18n.language] || 'en-IN';
+  
+  // Debug logging for language selection
+  console.log('Current app language:', i18n.language);
+  console.log('Selected speech recognition language:', currentLanguage);
 
   const requestPermissions = async () => {
     try {
@@ -170,6 +205,7 @@ const VoiceInput = ({
       <script>
         let recognition = null;
         let finalTranscript = '';
+        let currentLanguage = '${currentLanguage}';
 
         function sendMessage(data) {
           window.ReactNativeWebView.postMessage(JSON.stringify(data));
@@ -188,9 +224,9 @@ const VoiceInput = ({
           }
 
           recognition = new SpeechRecognition();
-          recognition.continuous = false;
+          recognition.continuous = true;
           recognition.interimResults = true;
-          recognition.lang = '${language}';
+          recognition.lang = currentLanguage;
           recognition.maxAlternatives = 1;
 
           recognition.onstart = function() {
@@ -300,11 +336,19 @@ const VoiceInput = ({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.inputContainer}>
+        <View style={styles.languageIndicator}>
+          <Text style={styles.languageText}>
+            {languageNames[currentLanguage]}
+          </Text>
+        </View>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          style={styles.input}
+          style={[
+            styles.input,
+            isRecording && styles.inputRecording
+          ]}
           multiline
           editable={!isRecording}
           {...props}
@@ -312,7 +356,9 @@ const VoiceInput = ({
         {isRecording && (
           <View style={styles.recordingIndicator}>
             <View style={styles.recordingDot} />
-            <Text style={styles.recordingText}>Listening...</Text>
+            <Text style={styles.recordingText}>
+              {transcribing ? t('transcribing') : t('listening')}...
+            </Text>
           </View>
         )}
       </View>
@@ -322,6 +368,7 @@ const VoiceInput = ({
           isRecording && styles.micButtonActive,
         ]}
         onPress={isRecording ? stopRecording : startRecording}
+        activeOpacity={0.7}
       >
         {isRecording ? (
           <Text style={styles.micText}>⏹</Text>
@@ -329,7 +376,11 @@ const VoiceInput = ({
           <Text style={styles.micText}>🎤</Text>
         )}
       </TouchableOpacity>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      )}
       
       {showWebView && (
         <View style={styles.webViewContainer}>
@@ -356,6 +407,21 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     position: 'relative',
   },
+  languageIndicator: {
+    position: 'absolute',
+    top: 5,
+    right: 8,
+    backgroundColor: '#e8e8e8',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 1,
+  },
+  languageText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: 'bold',
+  },
   inputContainer: {
     flex: 1,
     position: 'relative',
@@ -365,9 +431,18 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 8,
     padding: 10,
+    paddingRight: 35, // Space for language indicator
     minHeight: 40,
     maxHeight: 120,
     backgroundColor: '#fff',
+  },
+  inputRecording: {
+    borderColor: '#f44336',
+    shadowColor: '#f44336',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recordingIndicator: {
     position: 'absolute',
@@ -409,13 +484,19 @@ const styles = StyleSheet.create({
   micText: {
     fontSize: 20,
   },
-  error: {
+  errorContainer: {
     position: 'absolute',
-    bottom: -20,
+    bottom: -24,
     left: 0,
     right: 50,
+    backgroundColor: '#fdecea',
+    padding: 4,
+    borderRadius: 4,
+  },
+  error: {
     color: '#f44336',
     fontSize: 11,
+    textAlign: 'center',
   },
   webViewContainer: {
     position: 'absolute',

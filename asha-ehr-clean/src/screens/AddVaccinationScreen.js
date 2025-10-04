@@ -12,6 +12,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { VaccinationService } from '../database/vaccinationService';
 import { useTranslation } from 'react-i18next';
+import VoiceInput from '../components/VoiceInput';
 
 const AddVaccinationScreen = ({ route, navigation }) => {
     const { patient } = route.params;
@@ -110,7 +111,7 @@ const AddVaccinationScreen = ({ route, navigation }) => {
         )}
 
         <Text style={styles.label}>{t('notes')}</Text>
-        <TextInput
+        <VoiceInput
           style={[styles.input, styles.textArea]}
           value={notes}
           onChangeText={setNotes}
