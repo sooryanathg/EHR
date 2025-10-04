@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, NativeModules } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 
-// Debug: Log NativeModules.Voice to check if native module is loaded
-console.log('NativeModules.Voice:', NativeModules.Voice);
+const isVoiceAvailable = NativeModules.Voice !== null;
 
 const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 	const [isRecording, setIsRecording] = useState(false);
 	const [error, setError] = useState(null);
 
 	useEffect(() => {
+		if (!isVoiceAvailable) {
+			setError('Voice recognition is not available in Expo Go. Please use a development build.');
+			return;
+		}
 		Voice.onSpeechResults = onSpeechResults;
 		Voice.onSpeechError = onSpeechError;
 		return () => {
@@ -29,9 +32,43 @@ const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 		setIsRecording(false);
 	};
 
+	const requestAudioPermission = async () => {
+		try {
+			const granted = await PermissionsAndroid.request(
+				PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+				{
+					title: "Microphone Permission",
+					message: "This app needs access to your microphone for voice input.",
+					buttonNeutral: "Ask Me Later",
+					buttonNegative: "Cancel",
+					buttonPositive: "OK"
+				}
+			);
+			return granted === PermissionsAndroid.RESULTS.GRANTED;
+		} catch (err) {
+			console.warn(err);
+			return false;
+		}
+	};
+
 	const startRecording = async () => {
 		setError(null);
 		setIsRecording(true);
+		if (!isVoiceAvailable) {
+			setError('Voice recognition is not available. Please use a development build.');
+			setIsRecording(false);
+			return;
+		}
+
+		if (Platform.OS === 'android') {
+			const hasPermission = await requestAudioPermission();
+			if (!hasPermission) {
+				setError('Microphone permission denied');
+				setIsRecording(false);
+				return;
+			}
+		}
+
 		try {
 			await Voice.start('en-US');
 		} catch (e) {
