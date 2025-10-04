@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, NativeModules } from 'react-native';
 import Voice from '@react-native-voice/voice';
+
+// Debug: Log NativeModules.Voice to check if native module is loaded
+console.log('NativeModules.Voice:', NativeModules.Voice);
 
 const VoiceInput = ({ value, onChangeText, placeholder, style, ...props }) => {
 	const [isRecording, setIsRecording] = useState(false);
