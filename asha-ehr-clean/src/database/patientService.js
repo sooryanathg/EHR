@@ -1,15 +1,100 @@
 import db from './schema';
 import { syncManager } from '../services/syncManager';
+import { auth } from '../lib/firebase';
 
 export const PatientService = {
+  async ensurePatientTable() {
+    try {
+      // Check if the table exists and has the asha_id column
+      const tableInfo = await db.getAllAsync("PRAGMA table_info(patients)");
+      const hasAshaId = tableInfo.some(col => col.name === 'asha_id');
+      
+      if (!hasAshaId) {
+        // Recreate the table with the correct schema
+        await db.runAsync('BEGIN TRANSACTION');
+        
+        // Create temporary table
+        await db.execAsync(
+          `CREATE TABLE patients_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child')),
+            village TEXT NOT NULL,
+            health_id TEXT UNIQUE,
+            language TEXT DEFAULT 'en',
+            dob TEXT,
+            phone TEXT,
+            aadhar TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            synced INTEGER DEFAULT 0,
+            firestore_id TEXT,
+            asha_id TEXT
+          )`
+        );
+
+        // Copy data if old table exists
+        try {
+          await db.execAsync(
+            `INSERT INTO patients_new 
+             SELECT *, NULL as asha_id 
+             FROM patients`
+          );
+        } catch (e) {
+          console.log('No existing data to migrate');
+        }
+
+        // Replace old table
+        await db.execAsync('DROP TABLE IF EXISTS patients');
+        await db.execAsync('ALTER TABLE patients_new RENAME TO patients');
+        
+        await db.runAsync('COMMIT');
+        console.log('Successfully ensured patients table schema');
+      }
+    } catch (error) {
+      console.error('Error ensuring patient table:', error);
+      await db.runAsync('ROLLBACK');
+      throw error;
+    }
+  },
+
+  async assignUnassignedPatientsToCurrentAsha() {
+    try {
+      await this.ensurePatientTable();
+      
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.log('No authenticated user found, skipping patient assignment');
+        return;
+      }
+
+      // Assign all unassigned patients to the current ASHA
+      await db.runAsync(
+        `UPDATE patients SET asha_id = ? WHERE asha_id IS NULL`,
+        [currentUser.uid]
+      );
+
+      console.log('Successfully assigned unassigned patients to current ASHA');
+    } catch (error) {
+      console.error('Error assigning patients to ASHA:', error);
+    }
+  },
+
   async createPatient(patient) {
     // Import SyncQueueService here to avoid circular dependency issues
     const { SyncQueueService } = require('./syncQueueService');
+    
+    // Ensure table exists with correct schema
+    await this.ensurePatientTable();
 
     try {
+      // Get current ASHA ID from auth
+      const currentUser = auth.currentUser;
+      const ashaId = currentUser ? currentUser.uid : null;
+
       const result = await db.runAsync(
-        `INSERT INTO patients (name, age, type, village, health_id, language)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO patients (name, age, type, village, health_id, language, asha_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           patient.name,
           patient.age,
@@ -17,6 +102,7 @@ export const PatientService = {
           patient.village,
           patient.health_id || null,
           patient.language || 'en',
+          ashaId,
         ]
       );
 
@@ -44,18 +130,44 @@ export const PatientService = {
     }
   },
 
-  getAllPatients() {
-    return db.getAllAsync(`SELECT * FROM patients ORDER BY created_at DESC`);
+  async getAllPatients() {
+    await this.ensurePatientTable();
+    
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      return db.getAllAsync(
+        `SELECT * FROM patients WHERE asha_id = ? OR asha_id IS NULL ORDER BY created_at DESC`,
+        [currentUser.uid]
+      );
+    } else {
+      return db.getAllAsync(
+        `SELECT * FROM patients ORDER BY created_at DESC`
+      );
+    }
   },
 
-  searchPatients(query) {
+  async searchPatients(query) {
+    await this.ensurePatientTable();
+    
+    const currentUser = auth.currentUser;
     const like = `%${query}%`;
-    return db.getAllAsync(
-      `SELECT * FROM patients
-       WHERE name LIKE ? OR village LIKE ? OR IFNULL(health_id,'') LIKE ?
-       ORDER BY created_at DESC`,
-      [like, like, like]
-    );
+    
+    if (currentUser) {
+      return db.getAllAsync(
+        `SELECT * FROM patients
+         WHERE (asha_id = ? OR asha_id IS NULL) 
+         AND (name LIKE ? OR village LIKE ? OR IFNULL(health_id,'') LIKE ?)
+         ORDER BY created_at DESC`,
+        [currentUser.uid, like, like, like]
+      );
+    } else {
+      return db.getAllAsync(
+        `SELECT * FROM patients
+         WHERE name LIKE ? OR village LIKE ? OR IFNULL(health_id,'') LIKE ?
+         ORDER BY created_at DESC`,
+        [like, like, like]
+      );
+    }
   },
 
   getPatientById(id) {

@@ -60,7 +60,77 @@ if (!db.runAsync) {
   };
 }
 
+// Database version tracking
+const CURRENT_DB_VERSION = 2; // Increment this when schema changes
+
 export const initDatabase = async () => {
+  // Check and update database version
+  const checkDatabaseVersion = async () => {
+    try {
+      // Create version table if it doesn't exist
+      await db.execAsync(
+        `CREATE TABLE IF NOT EXISTS db_version (
+          version INTEGER PRIMARY KEY,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`
+      );
+
+      // Get current version
+      const versionRow = await db.getFirstAsync(
+        'SELECT version FROM db_version ORDER BY version DESC LIMIT 1'
+      );
+      const currentVersion = versionRow ? versionRow.version : 0;
+
+      console.log('Current database version:', currentVersion);
+      return currentVersion;
+    } catch (error) {
+      console.error('Error checking database version:', error);
+      return 0;
+    }
+  };
+
+  // Define migrations to run
+  const runMigrations = async () => {
+    try {
+      console.log('Starting database migrations...');
+      const dbVersion = await checkDatabaseVersion();
+      
+      if (dbVersion < CURRENT_DB_VERSION) {
+        // Drop and recreate patients table
+        await db.runAsync('DROP TABLE IF EXISTS patients');
+        
+        // Create patients table with new schema
+        await db.execAsync(
+          `CREATE TABLE patients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child')),
+            village TEXT NOT NULL,
+            health_id TEXT UNIQUE,
+            language TEXT DEFAULT 'en',
+            dob TEXT,
+            phone TEXT,
+            aadhar TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            synced INTEGER DEFAULT 0,
+            firestore_id TEXT,
+            asha_id TEXT
+          )`
+        );
+
+        // Update database version
+        await db.runAsync(
+          'INSERT INTO db_version (version) VALUES (?)',
+          [CURRENT_DB_VERSION]
+        );
+        
+        console.log('Successfully updated database to version', CURRENT_DB_VERSION);
+      }
+    } catch (error) {
+      console.error('Error running migrations:', error);
+    }
+  };
   // Enable foreign keys and create tables
   const stmts = [
     // Enable foreign keys and recursive triggers (for cascading deletes)
@@ -81,7 +151,8 @@ export const initDatabase = async () => {
       aadhar TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       synced INTEGER DEFAULT 0,
-      firestore_id TEXT
+      firestore_id TEXT,
+      asha_id TEXT
     );`,
 
     `CREATE TABLE IF NOT EXISTS pregnancy_details (
@@ -190,6 +261,9 @@ export const initDatabase = async () => {
       throw e;  // Stop if any statement fails
     }
   }
+
+  // Run migrations after schema is set up
+  await runMigrations();
 };
 
 export default db;

@@ -182,11 +182,12 @@ npm start
 ### 4. Default Login Credentials
 
 **Mobile App (ASHA)**
-- PIN: 1234 (for testing only)
+- email:asha@gmail.com
+- Password: 123456
 
 **Web Dashboard (PHC)**
 - Email: admin@phc.local
-- Password: test1234
+- Password: password123 (for testing only)
 
 ## Key Features In Detail
 
@@ -255,7 +256,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support and queries:
-- 📧 Email: support@example.com
+- 📧 Email: sooryanathgopi@gmail.com
 - 🌐 Website: https://example.com
 - 📱 Mobile: +1234567890
 

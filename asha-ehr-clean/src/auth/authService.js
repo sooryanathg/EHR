@@ -79,6 +79,14 @@ export const AuthService = {
         } catch (err) {
           console.warn('Failed to update user document:', err);
         }
+
+        // Assign any unassigned patients to this ASHA
+        try {
+          const { PatientService } = require('../database/patientService');
+          await PatientService.assignUnassignedPatientsToCurrentAsha();
+        } catch (err) {
+          console.warn('Failed to assign patients to ASHA:', err);
+        }
       }
       return userCred.user;
     } catch (error) {
