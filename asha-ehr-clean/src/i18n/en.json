@@ -134,5 +134,7 @@
   "delete": "Delete",
   "deleted": "Deleted",
   "patient_deleted": "Patient deleted successfully.",
-  "delete_patient_error": "Failed to delete patient."
+  "delete_patient_error": "Failed to delete patient.",
+  "today_visits": "Today's Visits",
+  "no_today_visits": "No visits scheduled for today."
 }
