@@ -6,12 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID,
+  apiKey: "AIzaSyBHFZB9455Y8KmucLkNpzd2X2sEpjg7r3k",
+  authDomain: "nexus-it-44cb1.firebaseapp.com",
+  projectId: "nexus-it-44cb1",
+  storageBucket: "nexus-it-44cb1.appspot.com",
+  messagingSenderId: "505288933029",
+  appId: "1:505288933029:web:b18b502726f9eb1d9e974c",
 };
 
 // Initialize Firebase
