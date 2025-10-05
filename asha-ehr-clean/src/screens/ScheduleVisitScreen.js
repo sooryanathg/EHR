@@ -26,17 +26,14 @@ const ScheduleVisitScreen = ({ navigation, route }) => {
     }
 
     try {
-      // Get the patient ID from route params
       const patientId = route.params?.patientId;
       if (!patientId) {
         throw new Error('Patient ID not found');
       }
 
-      // Calculate window start (1 day before) and window end (1 day after)
       const windowStart = addDays(date, -1).toISOString();
       const windowEnd = addDays(date, 1).toISOString();
       
-      // Insert the scheduled visit
       await db.runAsync(
         `INSERT INTO scheduled_visits (
           patient_id,
@@ -50,16 +47,15 @@ const ScheduleVisitScreen = ({ navigation, route }) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
         [
           patientId,
-          'general',    // visit_type
-          'regular',   // schedule_type
-          date.toISOString(), // due_date
-          windowStart, // window_start
-          windowEnd,   // window_end
-          'pending'    // status
+          'general',
+          'regular',
+          date.toISOString(),
+          windowStart,
+          windowEnd,
+          'pending'
         ]
       );
 
-      // Add reminder to notification queue
       await db.runAsync(
         `INSERT INTO notification_queue (
           patient_id,
@@ -99,58 +95,62 @@ const ScheduleVisitScreen = ({ navigation, route }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>{t('schedule_visit')}</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t('schedule_visit')}</Text>
+      </View>
+
+      <View style={styles.formCard}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('visit_purpose')}</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={purpose}
+            onChangeText={setPurpose}
+            placeholder={t('enter_visit_purpose')}
+            placeholderTextColor="#9CA3AF"
+            multiline={true}
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('visit_date')}</Text>
+          <TouchableOpacity 
+            style={styles.dateInput}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dateInputIcon}>📅</Text>
+            <Text style={styles.dateText}>{format(date, 'PPP')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            minimumDate={new Date()}
+          />
+        )}
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+          </TouchableOpacity>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('visit_purpose')}</Text>
-            <TextInput
-              style={styles.input}
-              value={purpose}
-              onChangeText={setPurpose}
-              placeholder={t('enter_visit_purpose')}
-              multiline={true}
-              numberOfLines={3}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('visit_date')}</Text>
-            <TouchableOpacity 
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateButtonText}>
-                {format(date, 'PPP')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              minimumDate={new Date()}
-            />
-          )}
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.scheduleButton}
-              onPress={handleSchedule}
-            >
-              <Text style={styles.scheduleButtonText}>{t('save')}</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.saveButton}
+            onPress={handleSchedule}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.saveButtonText}>{t('save')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -160,92 +160,110 @@ const ScheduleVisitScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFB',
   },
-  content: {
+  header: {
+    backgroundColor: '#FFFFFF',
     padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  sectionHeader: {
+  headerTitle: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: 0.3,
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 8,
-    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   input: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#ddd',
-    fontSize: 16,
-    minHeight: 100,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  textArea: {
+    height: 100,
     textAlignVertical: 'top',
+    paddingTop: 14,
   },
-  dateButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
+  dateInput: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  dateButtonText: {
-    fontSize: 16,
-    color: '#2c3e50',
+  dateInputIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  dateText: {
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+    gap: 12,
+    marginTop: 12,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#95a5a6',
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginRight: 10,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cancelButtonText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#6B7280',
   },
-  scheduleButton: {
+  saveButton: {
     flex: 1,
-    backgroundColor: '#2980b9',
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginLeft: 10,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  scheduleButtonText: {
-    color: '#fff',
+  saveButtonText: {
     fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });
 

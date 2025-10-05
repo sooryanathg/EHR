@@ -48,33 +48,51 @@ export default function AppHeader({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeText} numberOfLines={2}>{t('welcome')}</Text>
-        <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">{ashaName}</Text>
-      </View>
+      <View style={styles.content}>
+        {/* Left Section - Greeting */}
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingLabel}>{t('welcome')}</Text>
+          <Text style={styles.userName} numberOfLines={1}>{ashaName}</Text>
+        </View>
 
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.syncButton, isSyncing && styles.syncingButton]} 
-          onPress={handleSync}
-          disabled={isSyncing}
-        >
-          <Text style={styles.buttonText} numberOfLines={2}>{isSyncing ? t('syncing') : t('sync')}</Text>
-        </TouchableOpacity>
+        {/* Right Section - Action Buttons */}
+        <View style={styles.actionsContainer}>
+          {/* Sync Button */}
+          <TouchableOpacity 
+            style={[styles.iconButton, isSyncing && styles.iconButtonDisabled]} 
+            onPress={handleSync}
+            disabled={isSyncing}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconCircle, styles.syncCircle, isSyncing && styles.syncingCircle]}>
+              <Text style={styles.iconText}>↻</Text>
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.remindersButton]}
-          onPress={() => navigation.navigate('Reminders')}
-        >
-          <Text style={styles.buttonText} numberOfLines={2}>{t('reminders')}</Text>
-        </TouchableOpacity>
+          {/* Reminders Button */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Reminders')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconCircle, styles.reminderCircle]}>
+              <Text style={styles.iconText}>🔔</Text>
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.profileButton]}
-          onPress={() => setShowProfile(true)}
-        >
-          <Text style={styles.buttonText} numberOfLines={2}>{t('profile')}</Text>
-        </TouchableOpacity>
+          {/* Profile Button */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => setShowProfile(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconCircle, styles.profileCircle]}>
+              <Text style={styles.profileInitial}>
+                {ashaName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Profile Menu Modal */}
@@ -89,68 +107,82 @@ export default function AppHeader({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  content: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    minHeight: 64,
-    maxWidth: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  welcomeSection: {
+  greetingSection: {
     flex: 1,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    marginRight: 12,
-    maxWidth: '45%',
+    marginRight: 16,
   },
-  welcomeText: {
+  greetingLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
+    color: '#6B7280',
+    fontWeight: '500',
     marginBottom: 2,
-    flexWrap: 'wrap',
+    letterSpacing: 0.2,
   },
-  nameText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#2196f3',
-    flexShrink: 1,
-    numberOfLines: 1,
-    ellipsizeMode: 'tail',
+  userName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: 0.3,
   },
-  buttonsContainer: {
+  actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  button: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 4,
-    backgroundColor: '#2196f3',
-    minWidth: 60,
-    maxWidth: 90,
+  iconButton: {
+    padding: 2,
   },
-  syncButton: {
-    backgroundColor: '#27ae60',
+  iconButtonDisabled: {
+    opacity: 0.6,
   },
-  syncingButton: {
-    backgroundColor: '#95a5a6',
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  remindersButton: {
-    backgroundColor: '#f39c12',
+  syncCircle: {
+    backgroundColor: '#10B981',
   },
-  profileButton: {
-    backgroundColor: '#2196f3',
+  syncingCircle: {
+    backgroundColor: '#9CA3AF',
   },
-  buttonText: {
-    color: 'white',
+  reminderCircle: {
+    backgroundColor: '#F59E0B',
+  },
+  profileCircle: {
+    backgroundColor: '#3B82F6',
+  },
+  iconText: {
+    fontSize: 20,
+    color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 13,
-    textAlign: 'center',
+  },
+  profileInitial: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

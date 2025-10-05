@@ -31,12 +31,10 @@ const NewAddPatientScreen = ({ navigation }) => {
     health_id: '',
     phone: '',
     aadhar: '',
-    // Pregnancy details
     lmp_date: '',
     gravida: '1',
     parity: '0',
     high_risk: false,
-    // Child details
     dob: '',
     weight: '',
     parent_name: '',
@@ -148,173 +146,231 @@ const NewAddPatientScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.form}>
-        <View style={styles.syncRow}>
-          <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
-            <Text style={styles.syncButtonText}>Sync Now</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t('add_patient') || 'Add Patient'}</Text>
+        <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
+          <Text style={styles.syncButtonText}>Sync Now</Text>
+        </TouchableOpacity>
+      </View>
 
+      <View style={styles.formCard}>
         {/* Common Fields */}
-        <Text style={styles.label}>{t('name')} *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.name}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, name: text }))}
-          placeholder={t('name')}
-        />
-
-        <Text style={styles.label}>{t('age')} *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.age}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, age: text }))}
-          placeholder={t('age')}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>{t('type')} *</Text>
-        <View style={styles.typeContainer}>
-          {['pregnant', 'lactating', 'child'].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.typeButton, selectedType === type && styles.selectedType]}
-              onPress={() => handleTypeSelect(type)}
-            >
-              <Text
-                style={[
-                  styles.typeButtonText,
-                  selectedType === type && styles.selectedTypeText,
-                ]}
-              >
-                {t(type)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('name')} *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.name}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, name: text }))}
+            placeholder={t('name')}
+            placeholderTextColor="#9CA3AF"
+          />
         </View>
 
-        <Text style={styles.label}>{t('village')} *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.village}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, village: text }))}
-          placeholder={t('village')}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('age')} *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.age}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, age: text }))}
+            placeholder={t('age')}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+          />
+        </View>
 
-        <Text style={styles.label}>{t('health_id')}</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.health_id}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, health_id: text }))}
-          placeholder={`${t('health_id')} (${t('optional')})`}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('type')} *</Text>
+          <View style={styles.typeContainer}>
+            {['pregnant', 'lactating', 'child'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.typeButton, selectedType === type && styles.selectedType]}
+                onPress={() => handleTypeSelect(type)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    selectedType === type && styles.selectedTypeText,
+                  ]}
+                >
+                  {t(type)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-        <Text style={styles.label}>{t('phone')}</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.phone}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, phone: text }))}
-          placeholder={`${t('phone')} (${t('optional')})`}
-          keyboardType="phone-pad"
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('village')} *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.village}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, village: text }))}
+            placeholder={t('village')}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
 
-        <Text style={styles.label}>{t('aadhar')}</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.aadhar}
-          onChangeText={(text) => setFormData((prev) => ({ ...prev, aadhar: text }))}
-          placeholder={`${t('aadhar')} (${t('optional')})`}
-          keyboardType="numeric"
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('health_id')}</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.health_id}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, health_id: text }))}
+            placeholder={`${t('health_id')} (${t('optional')})`}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('phone')}</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.phone}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, phone: text }))}
+            placeholder={`${t('phone')} (${t('optional')})`}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>{t('aadhar')}</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.aadhar}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, aadhar: text }))}
+            placeholder={`${t('aadhar')} (${t('optional')})`}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+          />
+        </View>
 
         {/* Pregnancy-specific fields */}
         {selectedType === 'pregnant' && (
           <View>
+            <View style={styles.divider} />
             <Text style={styles.sectionTitle}>{t('pregnancy_details')}</Text>
 
-            <Text style={styles.label}>{t('lmp_date')} *</Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => showDatePickerFor('lmp_date')}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.lmp_date || t('select_date')}
-              </Text>
-            </TouchableOpacity>
-
-            <Text style={styles.label}>{t('gravida')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.gravida}
-              onChangeText={(text) => setFormData((prev) => ({ ...prev, gravida: text }))}
-              placeholder={t('gravida')}
-              keyboardType="numeric"
-            />
-
-            <Text style={styles.label}>{t('parity')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.parity}
-              onChangeText={(text) => setFormData((prev) => ({ ...prev, parity: text }))}
-              placeholder={t('parity')}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.checkboxContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('lmp_date')} *</Text>
               <TouchableOpacity
-                style={[styles.checkbox, formData.high_risk && styles.checkboxChecked]}
-                onPress={() =>
-                  setFormData((prev) => ({ ...prev, high_risk: !prev.high_risk }))
-                }
-              />
-              <Text style={styles.checkboxLabel}>{t('high_risk_pregnancy')}</Text>
+                style={styles.dateInput}
+                onPress={() => showDatePickerFor('lmp_date')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateInputIcon}>📅</Text>
+                <Text style={styles.dateText}>
+                  {formData.lmp_date || t('select_date')}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('gravida')} *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.gravida}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, gravida: text }))}
+                placeholder={t('gravida')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('parity')} *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.parity}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, parity: text }))}
+                placeholder={t('parity')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() =>
+                setFormData((prev) => ({ ...prev, high_risk: !prev.high_risk }))
+              }
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, formData.high_risk && styles.checkboxChecked]}>
+                {formData.high_risk && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>{t('high_risk_pregnancy')}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {/* Child-specific fields */}
         {selectedType === 'child' && (
           <View>
+            <View style={styles.divider} />
             <Text style={styles.sectionTitle}>{t('child_details')}</Text>
 
-            <Text style={styles.label}>{t('date_of_birth')} *</Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => showDatePickerFor('dob')}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.dob || t('select_date')}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('date_of_birth')} *</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => showDatePickerFor('dob')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateInputIcon}>📅</Text>
+                <Text style={styles.dateText}>
+                  {formData.dob || t('select_date')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.label}>{t('birth_weight')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.weight}
-              onChangeText={(text) => setFormData((prev) => ({ ...prev, weight: text }))}
-              placeholder={t('weight_in_kg')}
-              keyboardType="decimal-pad"
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('birth_weight')} *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.weight}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, weight: text }))}
+                placeholder={t('weight_in_kg')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+            </View>
 
-            <Text style={styles.label}>{t('parent_name')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.parent_name}
-              onChangeText={(text) => setFormData((prev) => ({ ...prev, parent_name: text }))}
-              placeholder={t('parent_name')}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('parent_name')} *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.parent_name}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, parent_name: text }))}
+                placeholder={t('parent_name')}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
           </View>
         )}
 
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.disabledButton]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          <Text style={styles.saveButtonText}>
-            {loading ? t('saving') : t('save')}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.saveButtonText}>
+              {loading ? t('saving') : t('save')}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {showDatePicker && (
           <DateTimePicker
@@ -331,84 +387,192 @@ const NewAddPatientScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  form: { padding: 20, backgroundColor: '#fff' },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginTop: 20,
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 5,
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
   },
-  label: { fontSize: 16, marginBottom: 5, color: '#34495e', fontWeight: '600' },
-  input: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#bdc3c7',
+  header: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: 0.3,
+  },
+  syncButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
+  },
+  syncButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
   },
   typeContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
+    gap: 8,
   },
   typeButton: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#3498db',
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 4,
+    backgroundColor: '#F9FAFB',
   },
-  selectedType: { backgroundColor: '#3498db' },
-  typeButtonText: { color: '#3498db', fontWeight: '600' },
-  selectedTypeText: { color: '#fff' },
-  saveButton: {
-    backgroundColor: '#2ecc71',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
+  selectedType: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
   },
-  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  disabledButton: { backgroundColor: '#95a5a6' },
-  dateButton: {
-    backgroundColor: '#f5f5f5',
-    padding: 12,
-    borderRadius: 5,
-    marginBottom: 15,
+  typeButtonText: {
+    color: '#6B7280',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  selectedTypeText: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  dateInput: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  dateButtonText: { color: '#34495e', fontSize: 16 },
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 10 },
+  dateInputIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  dateText: {
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#3498db',
-    borderRadius: 4,
-    marginRight: 10,
+    borderColor: '#3B82F6',
+    borderRadius: 6,
+    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
   },
-  checkboxChecked: { backgroundColor: '#3498db' },
-  checkboxLabel: { fontSize: 16, color: '#34495e' },
-  syncRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },
-  syncButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+  checkboxChecked: {
+    backgroundColor: '#3B82F6',
   },
-  syncButtonText: { color: '#fff', fontWeight: '600' },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
 });
 
 export default NewAddPatientScreen;

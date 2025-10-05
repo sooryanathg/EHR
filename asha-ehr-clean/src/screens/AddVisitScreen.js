@@ -8,6 +8,8 @@ import {
   Alert,
   ScrollView,
   Platform,
+  KeyboardAvoidingView,
+  SafeAreaView,
 } from 'react-native';
 import VoiceInput from '../components/VoiceInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -34,19 +36,20 @@ const AddVisitScreen = ({ navigation, route }) => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      
+
       const visitData = {
         ...formData,
         patient_id: patient.id,
-        // use the date the user provided (visited/recorded date)
         date: formData.date || new Date().toISOString().split('T')[0],
         bp_systolic: formData.bp_systolic ? parseInt(formData.bp_systolic) : null,
         bp_diastolic: formData.bp_diastolic ? parseInt(formData.bp_diastolic) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
-        medicines_given: formData.medicines ? formData.medicines.split('\n').map(s => s.trim()).filter(Boolean) : null
+        medicines_given: formData.medicines
+          ? formData.medicines.split('\n').map(s => s.trim()).filter(Boolean)
+          : null
       };
 
-  await VisitService.createAndQueueVisit(visitData);
+      await VisitService.createAndQueueVisit(visitData);
       navigation.goBack();
       Alert.alert(t('success'), t('visit_added_success'));
     } catch (error) {
@@ -65,11 +68,7 @@ const AddVisitScreen = ({ navigation, route }) => {
     return `${year}-${mm}-${dd}`;
   };
 
-  const openVisitPicker = () => setShowVisitPicker(true);
-  const openNextVisitPicker = () => setShowNextVisitPicker(true);
-
   const onVisitChange = (event, selectedDate) => {
-    // On Android the picker may be dismissed (selectedDate undefined)
     setShowVisitPicker(Platform.OS === 'ios');
     if (selectedDate) {
       setFormData(prev => ({ ...prev, date: formatDate(selectedDate) }));
@@ -84,293 +83,342 @@ const AddVisitScreen = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('add_visit')}</Text>
-        <Text style={styles.patientName}>{patient.name}</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: 100 }} // prevents overflow
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{t('add_visit')}</Text>
+            <Text style={styles.headerSubtitle}>{patient.name}</Text>
+          </View>
 
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('visit_type')}</Text>
-          <View style={styles.radioGroup}>
-            {['general', 'anc', 'immunization'].map(type => (
+          <View style={styles.formCard}>
+            {/* Visit Type */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('visit_type')}</Text>
+              <View style={styles.radioGroup}>
+                {['general', 'anc', 'immunization'].map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.radioButton,
+                      formData.type === type && styles.radioButtonSelected
+                    ]}
+                    onPress={() => setFormData(prev => ({ ...prev, type }))}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.radioText,
+                        formData.type === type && styles.radioTextSelected
+                      ]}
+                    >
+                      {type === 'general'
+                        ? t('visit_type_general')
+                        : type === 'anc'
+                        ? t('visit_type_anc')
+                        : t('visit_type_immunization')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Visit Date */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('visit_date')}</Text>
               <TouchableOpacity
-                key={type}
-                style={[
-                  styles.radioButton,
-                  formData.type === type && styles.radioButtonSelected
-                ]}
-                onPress={() => setFormData(prev => ({ ...prev, type }))}
+                style={styles.dateInput}
+                onPress={() => setShowVisitPicker(true)}
+                activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.radioText,
-                  formData.type === type && styles.radioTextSelected
-                ]}>
-                  {type === 'general' ? t('visit_type_general') : type === 'anc' ? t('visit_type_anc') : t('visit_type_immunization')}
+                <Text style={styles.dateInputIcon}>📅</Text>
+                <Text style={styles.dateText}>{formData.date || 'YYYY-MM-DD'}</Text>
+              </TouchableOpacity>
+              {showVisitPicker && (
+                <DateTimePicker
+                  value={
+                    new Date(formData.date || new Date().toISOString().split('T')[0])
+                  }
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                  onChange={onVisitChange}
+                />
+              )}
+            </View>
+
+            {/* BP Inputs */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('blood_pressure')}</Text>
+              <View style={styles.bpContainer}>
+                <View style={styles.bpInput}>
+                  <Text style={styles.bpLabel}>{t('systolic')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bp_systolic}
+                    onChangeText={(value) =>
+                      setFormData(prev => ({ ...prev, bp_systolic: value }))
+                    }
+                    placeholder="120"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={styles.bpInput}>
+                  <Text style={styles.bpLabel}>{t('diastolic')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bp_diastolic}
+                    onChangeText={(value) =>
+                      setFormData(prev => ({ ...prev, bp_diastolic: value }))
+                    }
+                    placeholder="80"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Weight */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('weight_kg')}</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.weight}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, weight: value }))}
+                placeholder={t('enter_weight_placeholder')}
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Notes */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('notes')}</Text>
+              <VoiceInput
+                style={[styles.input, styles.textArea]}
+                value={formData.notes}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, notes: value }))}
+                placeholder={t('enter_visit_notes_placeholder')}
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            {/* Medicines */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Medicines given (one per line)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.medicines}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, medicines: value }))}
+                placeholder={'Paracetamol 250mg\nORS 1 sachet'}
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Next Visit */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('next_visit_date')}</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setShowNextVisitPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateInputIcon}>📅</Text>
+                <Text style={styles.dateText}>
+                  {formData.next_visit || 'YYYY-MM-DD'}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('visit_date')}</Text>
-          <TouchableOpacity style={styles.input} onPress={openVisitPicker}>
-            <Text style={{ color: formData.date ? '#2c3e50' : '#7f8c8d' }}>{formData.date || 'YYYY-MM-DD'}</Text>
-          </TouchableOpacity>
-          {showVisitPicker && (
-            <DateTimePicker
-              value={new Date(formData.date || new Date().toISOString().split('T')[0])}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-              onChange={onVisitChange}
-            />
-          )}
-
-          <Text style={styles.label}>{t('blood_pressure')}</Text>
-          <View style={styles.bpContainer}>
-            <View style={styles.bpInput}>
-              <Text style={styles.bpLabel}>{t('systolic')}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.bp_systolic}
-                onChangeText={(value) => setFormData(prev => ({ ...prev, bp_systolic: value }))}
-                placeholder="120"
-                keyboardType="numeric"
-              />
+              {showNextVisitPicker && (
+                <DateTimePicker
+                  value={formData.next_visit ? new Date(formData.next_visit) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                  onChange={onNextVisitChange}
+                />
+              )}
             </View>
-            <View style={styles.bpInput}>
-              <Text style={styles.bpLabel}>{t('diastolic')}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.bp_diastolic}
-                onChangeText={(value) => setFormData(prev => ({ ...prev, bp_diastolic: value }))}
-                placeholder="80"
-                keyboardType="numeric"
-              />
+
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.saveButtonText} adjustsFontSizeToFit>
+                  {loading ? t('saving') : t('save_visit')}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('weight_kg')}</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.weight}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, weight: value }))}
-            placeholder={t('enter_weight_placeholder')}
-            keyboardType="numeric"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('notes')}</Text>
-          <VoiceInput
-            style={[styles.input, styles.textArea]}
-            value={formData.notes}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, notes: value }))}
-            placeholder={t('enter_visit_notes_placeholder')}
-            multiline
-            numberOfLines={4}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Medicines given (one per line)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={formData.medicines}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, medicines: value }))}
-            placeholder={'Paracetamol 250mg\nORS 1 sachet'}
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('next_visit_date')}</Text>
-          <TouchableOpacity style={styles.input} onPress={openNextVisitPicker}>
-            <Text style={{ color: formData.next_visit ? '#2c3e50' : '#7f8c8d' }}>{formData.next_visit || 'YYYY-MM-DD'}</Text>
-          </TouchableOpacity>
-          {showNextVisitPicker && (
-            <DateTimePicker
-              value={formData.next_visit ? new Date(formData.next_visit) : new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-              onChange={onNextVisitChange}
-            />
-          )}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            <Text style={styles.saveButtonText}>{loading ? t('saving') : t('save_visit')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F0F0F0',
   },
-  title: {
+  headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
   },
-  patientName: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    marginTop: 5,
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
   },
-  form: {
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    borderRadius: 16,
     padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginHorizontal: 15,
-    marginTop: 15,
-    marginBottom: 20,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#374151',
     marginBottom: 8,
   },
   input: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#2c3e50',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#1F2937',
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-    minHeight: 100,
   },
   radioGroup: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   radioButton: {
     flex: 1,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    backgroundColor: '#F9FAFB',
   },
   radioButtonSelected: {
-    borderColor: '#3498db',
-    backgroundColor: '#e3f2fd',
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
   },
   radioText: {
-    fontSize: 14,
-    color: '#7f8c8d',
+    fontSize: 13,
+    color: '#6B7280',
   },
   radioTextSelected: {
-    color: '#3498db',
+    color: '#3B82F6',
     fontWeight: '600',
+  },
+  dateInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInputIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  dateText: {
+    fontSize: 15,
+    color: '#1F2937',
   },
   bpContainer: {
     flexDirection: 'row',
-    gap: 15,
-    marginTop: 5,
+    gap: 12,
   },
   bpInput: {
     flex: 1,
   },
   bpLabel: {
-    fontSize: 14,
-    color: '#7f8c8d',
+    fontSize: 13,
+    color: '#6B7280',
     marginBottom: 6,
-    fontWeight: '500',
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 15,
-    marginTop: 32,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    gap: 12,
+    marginTop: 12,
   },
   cancelButton: {
     flex: 1,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cancelButtonText: {
     fontSize: 16,
-    color: '#2c3e50',
     fontWeight: '600',
+    color: '#6B7280',
   },
   saveButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#3498db',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   saveButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
 });
 
