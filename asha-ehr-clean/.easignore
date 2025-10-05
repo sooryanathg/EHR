@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+.git/
+.gitignore
+*.log
+android/app/build/
+ios/build/
