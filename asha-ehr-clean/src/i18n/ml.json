@@ -20,6 +20,7 @@
   "filter_pregnant": "ഗർഭിണി",
   "filter_lactating": "സ്തന്യദാനദായക",
   "filter_child": "കുട്ടികൾ",
+  "filter_general": "ജനറൽ",
   "no_match_search": "തിരച്ചിലിൽ ഒന്നുമില്ല",
   "no_patients": "ഇനിയും രോഗികൾ ചേർത്തിട്ടില്ല",
   "add_button": "+ ചേർക്കുക",
@@ -28,6 +29,7 @@
   "patient_type_pregnant": "ഗർഭിണി സ്ത്രീ",
   "patient_type_lactating": "സ്തന്യദാനക സ്ത്രീ",
   "patient_type_child": "ശിശു",
+  "general": "ജനറൽ ",
 
   "scheduled_visits": "നിശ്ചയിച്ച സന്ദർശനങ്ങൾ",
   "schedule_visit": "സന്ദർശനം നിശ്ചയിക്കുക",

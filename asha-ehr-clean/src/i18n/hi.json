@@ -31,6 +31,7 @@
   "filter_pregnant": "गर्भवती",
   "filter_lactating": "स्तनपान",
   "filter_child": "बच्चे",
+  "filter_general": "सामान्य",
   "no_match_search": "कोई मरीज आपकी खोज से मेल नहीं खाते",
   "no_patients": "अभी तक कोई मरीज नहीं जोड़ा गया",
   
@@ -63,6 +64,9 @@
   "synced": "सिंक किया गया",
   "not_synced": "सिंक नहीं हुआ",
   "patient_type_pregnant": "गर्भवती महिला",
+  "patient_type_lactating": "स्तनपान कराने वाली महिला",
+  "patient_type_child": "बच्चा",
+  "general": "सामान्य",
   "vaccination_add_error": "टीकाकरण रिकॉर्ड जोड़ने में विफल",
   "scheduled_vaccination_entry": "निर्धारित: {{type}}",
   "scheduled_vaccination": "निर्धारित टीकाकरण",
@@ -76,8 +80,6 @@
   "pending_sync": "सिंक होना बाकी है",
   "patient_information": "मरीज की जानकारी",
   "years": "वर्ष",
-  "patient_type_lactating": "स्तनपान कराने वाली महिला",
-  "patient_type_child": "बच्चा",
   
   "add_visit": "दौरा जोड़े",
   "visit_type": "दौरे का प्रकार",

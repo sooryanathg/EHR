@@ -92,6 +92,7 @@ const NewPatientListScreen = ({ navigation }) => {
       case 'pregnant': return t('patient_type_pregnant');
       case 'lactating': return t('patient_type_lactating');
       case 'child': return t('patient_type_child');
+      case 'general': return t('general');
       default: return type;
     }
   };
@@ -101,6 +102,7 @@ const NewPatientListScreen = ({ navigation }) => {
       case 'pregnant': return '#EC4899';
       case 'lactating': return '#8B5CF6';
       case 'child': return '#06B6D4';
+      case 'general': return '#059669';
       default: return '#6B7280';
     }
   };
@@ -216,6 +218,15 @@ const NewPatientListScreen = ({ navigation }) => {
             >
               <Text style={[styles.filterChipText, activeFilter === 'child' && styles.filterChipTextActive]}>
                 {t('filter_child')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, activeFilter === 'general' && styles.filterChipActive]}
+              onPress={() => handleFilterChange('general')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterChipText, activeFilter === 'general' && styles.filterChipTextActive]}>
+                {t('filter_general')}
               </Text>
             </TouchableOpacity>
           </ScrollView>

@@ -194,7 +194,7 @@ const NewAddPatientScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>{t('type')} *</Text>
           <View style={styles.typeContainer}>
-            {['pregnant', 'lactating', 'child'].map((type) => (
+            {['pregnant', 'lactating', 'child', 'general'].map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[styles.typeButton, selectedType === type && styles.selectedType]}
@@ -472,29 +472,41 @@ const styles = StyleSheet.create({
   },
   typeContainer: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
   },
   typeButton: {
     flex: 1,
-    padding: 14,
-    borderWidth: 1,
+    minWidth: '48%',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
     borderRadius: 12,
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
+    marginBottom: 10,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   selectedType: {
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
+    borderWidth: 2,
   },
   typeButtonText: {
-    color: '#6B7280',
-    fontWeight: '500',
-    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '600',
+    fontSize: 15,
+    textTransform: 'capitalize',
   },
   selectedTypeText: {
     color: '#3B82F6',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dateInput: {
     backgroundColor: '#F9FAFB',

@@ -61,7 +61,7 @@ if (!db.runAsync) {
 }
 
 // Database version tracking
-const CURRENT_DB_VERSION = 2; // Increment this when schema changes
+const CURRENT_DB_VERSION = 3; // Increment this when schema changes
 
 export const initDatabase = async () => {
   // Check and update database version
@@ -105,7 +105,7 @@ export const initDatabase = async () => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             age INTEGER NOT NULL,
-            type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child')),
+            type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child','general')),
             village TEXT NOT NULL,
             health_id TEXT UNIQUE,
             language TEXT DEFAULT 'en',
@@ -142,7 +142,7 @@ export const initDatabase = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       age INTEGER NOT NULL,
-      type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child')),
+      type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child','general')),
       village TEXT NOT NULL,
       health_id TEXT UNIQUE,
       language TEXT DEFAULT 'en',
