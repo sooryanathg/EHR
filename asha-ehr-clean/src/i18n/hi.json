@@ -23,7 +23,7 @@
   "type": "प्रकार",
   "village": "गाँव",
   "save": "सहेजें",
-  "logout": "लॉग आउट",
+  "Logout": "लॉग आउट",
 
   "patients_title": "मरीज",
   "search_placeholder": "मरीज खोजें...",
@@ -128,5 +128,6 @@
   "upcoming_vaccinations": "आगामी टीकाकरण",
   "no_upcoming_vaccinations": "कोई आगामी टीकाकरण नहीं",
   "today_visits": "आज की यात्राएँ",
-  "no_today_visits": "आज के लिए कोई यात्रा निर्धारित नहीं है।"
+  "no_today_visits": "आज के लिए कोई यात्रा निर्धारित नहीं है।",
+  "Select Language":""
 }

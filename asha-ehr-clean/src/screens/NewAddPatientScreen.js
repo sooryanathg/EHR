@@ -15,6 +15,8 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  KeyboardAvoidingView,
+  SafeAreaView,
 } from 'react-native';
 import { showSuccess, showError } from '../utils/alerts';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -145,13 +147,24 @@ const NewAddPatientScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('add_patient') || 'Add Patient'}</Text>
-        <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
-          <Text style={styles.syncButtonText}>Sync Now</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{t('add_patient') || 'Add Patient'}</Text>
+            <TouchableOpacity style={styles.syncButton} onPress={handleManualSync}>
+              <Text style={styles.syncButtonText}>Sync Now</Text>
+            </TouchableOpacity>
+          </View>
 
       <View style={styles.formCard}>
         {/* Common Fields */}
@@ -382,14 +395,23 @@ const NewAddPatientScreen = ({ navigation }) => {
           />
         )}
       </View>
-    </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120, // Extra padding at bottom to ensure last input is visible
   },
   header: {
     backgroundColor: '#FFFFFF',

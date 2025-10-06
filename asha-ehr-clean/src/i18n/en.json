@@ -12,7 +12,7 @@
   "type": "Type",
   "village": "Village",
   "save": "Save",
-  "logout": "Logout",
+  "Logout": "Logout",
   
   "phone": "Phone Number",
   "aadhar": "Aadhar Number",
@@ -136,5 +136,6 @@
   "patient_deleted": "Patient deleted successfully.",
   "delete_patient_error": "Failed to delete patient.",
   "today_visits": "Today's Visits",
-  "no_today_visits": "No visits scheduled for today."
+  "no_today_visits": "No visits scheduled for today.",
+  "Select Language":"Select Language"
 }

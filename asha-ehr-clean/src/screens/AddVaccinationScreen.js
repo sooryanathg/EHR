@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  SafeAreaView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { VaccinationService } from '../database/vaccinationService';
@@ -50,11 +52,22 @@ const AddVaccinationScreen = ({ route, navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('add_vaccination')}</Text>
-        <Text style={styles.headerSubtitle}>{patient.name}</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{t('add_vaccination')}</Text>
+            <Text style={styles.headerSubtitle}>{patient.name}</Text>
+          </View>
 
       <View style={styles.formCard}>
         <View style={styles.inputGroup}>
@@ -166,14 +179,23 @@ const AddVaccinationScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120, // Extra padding at bottom to ensure last input is visible
   },
   header: {
     backgroundColor: '#FFFFFF',

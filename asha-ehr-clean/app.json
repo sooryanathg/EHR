@@ -16,8 +16,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Allow Asha EHR to access your microphone for voice input in medical records.",
-        "NSSpeechRecognitionUsageDescription": "Allow Asha EHR to use speech recognition for transcribing medical documentation."
-      }
+        "NSSpeechRecognitionUsageDescription": "Allow Asha EHR to use speech recognition for transcribing medical documentation.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.nexus.ashaehr"
     },
     "android": {
       "adaptiveIcon": {

@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -176,7 +177,11 @@ const NewPatientListScreen = ({ navigation }) => {
             )}
           </View>
 
-          <View style={styles.filterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
             <TouchableOpacity
               style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
               onPress={() => handleFilterChange('all')}
@@ -213,7 +218,7 @@ const NewPatientListScreen = ({ navigation }) => {
                 {t('filter_child')}
               </Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
 
         {/* Patient List */}
@@ -307,21 +312,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9CA3AF',
   },
-  filterContainer: {
-    flexDirection: 'row',
+  filterScrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     gap: 8,
   },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginRight: 8,
   },
   filterChipActive: {
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
+  },
+  filterIcon: {
+    fontSize: 16,
+    marginRight: 6,
   },
   filterChipText: {
     fontSize: 13,
