@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
 import { auth, db } from '../lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const PIN_KEY = 'asha_pin';
 const USER_ROLE_KEY = 'user_role';
@@ -69,13 +69,27 @@ export const AuthService = {
       await AsyncStorage.setItem('asha_password', password);
       // Store login timestamp for session expiry
       await AsyncStorage.setItem('asha_login_timestamp', Date.now().toString());
-      // Store ASHA name if available
-      if (userCred && userCred.user && userCred.user.displayName) {
-        await AsyncStorage.setItem('asha_name', userCred.user.displayName);
-      }
-      
+      // Get and store ASHA name and user ID
       if (userCred && userCred.user && userCred.user.uid) {
         const uid = userCred.user.uid;
+        await AsyncStorage.setItem('firebase_uid', uid);
+        
+        try {
+          // Try to get name from Firestore first
+          const userDoc = await getDoc(doc(db, 'users', uid));
+          const name = userDoc.exists() ? userDoc.data()?.name : '';
+          
+          if (name) {
+            await AsyncStorage.setItem('asha_name', name);
+          } else if (userCred.user.displayName) {
+            await AsyncStorage.setItem('asha_name', userCred.user.displayName);
+          }
+        } catch (e) {
+          console.warn('Failed to get ASHA name:', e);
+          if (userCred.user.displayName) {
+            await AsyncStorage.setItem('asha_name', userCred.user.displayName);
+          }
+        }
         await AsyncStorage.setItem('firebase_uid', uid);
         
         // Ensure user document exists

@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext } from 'react';
 import i18n from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
+
+// Create a context for ASHA details
+export const AshaContext = createContext(null);
 import en from './src/i18n/en.json';
 import hi from './src/i18n/hi.json';
 import ta from './src/i18n/ta.json';
@@ -36,7 +39,8 @@ import TodayVisitsScreen from './src/screens/TodayVisitsScreen';
 import ScheduleVisitScreen from './src/screens/ScheduleVisitScreen';
 import NetInfo from '@react-native-community/netinfo';
 import { syncManager } from './src/services/syncManager';
-import { auth } from './src/lib/firebase';
+import { auth, db } from './src/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -88,6 +92,7 @@ function LoadingScreen() {
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
+  const [ashaName, setAshaName] = useState('');
 
   useEffect(() => {
     let unsubscribeFn = null;
@@ -98,6 +103,33 @@ export default function App() {
 
         // Initialize database
         await initDatabase();
+
+        // Load ASHA name from all possible sources
+        try {
+          const user = auth.currentUser;
+          let name = '';
+          
+          // First try AsyncStorage
+          name = await AsyncStorage.getItem('asha_name');
+          
+          // Then try Firestore if we have a user
+          if (user) {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists() && userDoc.data()?.name) {
+              name = userDoc.data().name;
+              // Update AsyncStorage with latest name
+              await AsyncStorage.setItem('asha_name', name);
+            } else if (user.displayName) {
+              name = user.displayName;
+              await AsyncStorage.setItem('asha_name', name);
+            }
+          }
+          
+          setAshaName(name || 'ASHA');
+        } catch (e) {
+          console.warn('Error loading ASHA name:', e);
+          setAshaName('ASHA');
+        }
 
         // Check for session expiry (7 days)
         const loginTimestamp = await AsyncStorage.getItem('asha_login_timestamp');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -15,20 +16,36 @@ export default function AppHeader({ navigation }) {
   useEffect(() => {
     const loadAshaDetails = async () => {
       try {
+        // First try to get from AsyncStorage as it's fastest
+        const storedName = await AsyncStorage.getItem('asha_name');
+        if (storedName) {
+          setAshaName(storedName);
+          return;
+        }
+
+        // If no stored name, try getting from Firestore
         const user = auth.currentUser;
         if (user) {
-          // First try to get from users collection in Firestore
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists() && userDoc.data()?.name) {
-            setAshaName(userDoc.data().name);
-          } else {
-            // Fallback to auth displayName
-            setAshaName(user.displayName || 'ASHA');
+            const name = userDoc.data().name;
+            setAshaName(name);
+            await AsyncStorage.setItem('asha_name', name);
+            return;
+          }
+          
+          // Last resort: use displayName
+          if (user.displayName) {
+            setAshaName(user.displayName);
+            await AsyncStorage.setItem('asha_name', user.displayName);
+            return;
           }
         }
+        
+        setAshaName('ASHA');
       } catch (error) {
         console.error('Error loading ASHA details:', error);
-        setAshaName('ASHA'); // Fallback name
+        setAshaName('ASHA');
       }
     };
     loadAshaDetails();
