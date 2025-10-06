@@ -15,19 +15,27 @@ export default function ProfileMenu({ visible, onClose, navigation }) {
     const loadAshaDetails = async () => {
       try {
         const user = auth.currentUser;
+        let name = '';
         if (user) {
           // First try to get from users collection in Firestore
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists() && userDoc.data()?.name) {
-            setAshaName(userDoc.data().name);
-          } else {
-            // Fallback to auth displayName
-            setAshaName(user.displayName || 'ASHA');
+            name = userDoc.data().name;
+          } else if (user.displayName) {
+            name = user.displayName;
           }
         }
+        // Fallback to AsyncStorage if name is still empty
+        if (!name) {
+          const storedName = await AsyncStorage.getItem('asha_name');
+          name = storedName || 'ASHA';
+        }
+        setAshaName(name);
       } catch (error) {
         console.error('Error loading ASHA details:', error);
-        setAshaName('ASHA'); // Fallback name
+        // Fallback to AsyncStorage
+        const storedName = await AsyncStorage.getItem('asha_name');
+        setAshaName(storedName || 'ASHA');
       }
     };
     loadAshaDetails();

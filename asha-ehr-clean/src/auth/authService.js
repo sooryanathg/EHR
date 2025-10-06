@@ -33,6 +33,9 @@ export const AuthService = {
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
+      if (name) {
+        await AsyncStorage.setItem('asha_name', name);
+      }
       // persist firebase uid for sync
       if (userCred && userCred.user && userCred.user.uid) {
         const uid = userCred.user.uid;
@@ -64,6 +67,12 @@ export const AuthService = {
       await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
       await AsyncStorage.setItem('asha_email', email);
       await AsyncStorage.setItem('asha_password', password);
+      // Store login timestamp for session expiry
+      await AsyncStorage.setItem('asha_login_timestamp', Date.now().toString());
+      // Store ASHA name if available
+      if (userCred && userCred.user && userCred.user.displayName) {
+        await AsyncStorage.setItem('asha_name', userCred.user.displayName);
+      }
       
       if (userCred && userCred.user && userCred.user.uid) {
         const uid = userCred.user.uid;

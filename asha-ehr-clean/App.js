@@ -87,6 +87,7 @@ function LoadingScreen() {
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Login');
 
   useEffect(() => {
     let unsubscribeFn = null;
@@ -98,13 +99,59 @@ export default function App() {
         // Initialize database
         await initDatabase();
 
+        // Check for session expiry (7 days)
+        const loginTimestamp = await AsyncStorage.getItem('asha_login_timestamp');
+        if (loginTimestamp) {
+          const now = Date.now();
+          const sevenDays = 7 * 24 * 60 * 60 * 1000;
+          if (now - parseInt(loginTimestamp, 10) < sevenDays) {
+            setInitialRoute('PatientList');
+          } else {
+            // Session expired, clear login timestamp
+            await AsyncStorage.removeItem('asha_login_timestamp');
+            setInitialRoute('Login');
+          }
+        } else {
+          setInitialRoute('Login');
+        }
+
         // After DB is ready, set up connectivity listener for sync
         let wasConnected = false;
         const unsub = NetInfo.addEventListener((state) => {
           const isConnected = Boolean(state.isConnected && state.isInternetReachable);
           if (!wasConnected && isConnected) {
             try {
-              syncManager.syncData().catch((e) => console.warn('Background sync failed:', e));
+              Toast.show({
+                type: 'info',
+                text1: 'Back Online',
+                text2: 'Syncing your data...',
+                position: 'top',
+                autoHide: true,
+                visibilityTime: 2000,
+              });
+              
+              syncManager.syncData()
+                .then(() => {
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Sync Complete',
+                    text2: 'Your data is up to date',
+                    position: 'top',
+                    autoHide: true,
+                    visibilityTime: 2000,
+                  });
+                })
+                .catch((e) => {
+                  console.warn('Background sync failed:', e);
+                  Toast.show({
+                    type: 'error',
+                    text1: 'Sync Failed',
+                    text2: 'Please try again later',
+                    position: 'top',
+                    autoHide: true,
+                    visibilityTime: 3000,
+                  });
+                });
             } catch (e) {
               console.warn('Error invoking syncManager:', e);
             }
@@ -193,7 +240,7 @@ export default function App() {
       <View style={{ flex: 1 }}>
         <NavigationContainer>
           <Stack.Navigator 
-                initialRouteName="Login"
+                initialRouteName={initialRoute}
                 screenOptions={{
                   headerShown: false // Disable default headers globally
                 }}
@@ -224,6 +271,7 @@ export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
       {SafeAreaProvider ? <SafeAreaProvider>{AppContent}</SafeAreaProvider> : AppContent}
+      <Toast config={toastConfig} />
     </I18nextProvider>
   );
 }
