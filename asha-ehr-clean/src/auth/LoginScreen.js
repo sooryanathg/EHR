@@ -57,6 +57,7 @@ const LoginScreen = ({ navigation }) => {
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
+            placeholderTextColor="#95a5a6"
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -68,6 +69,7 @@ const LoginScreen = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               placeholder="Enter password"
+              placeholderTextColor="#95a5a6"
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
@@ -147,6 +149,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    color: '#2c3e50',
+    placeholderTextColor: '#95a5a6',
   },
   passwordWrapper: {
     flexDirection: 'row',
