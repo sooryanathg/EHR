@@ -3,71 +3,61 @@ import { openDatabaseSync } from 'expo-sqlite';
 export const databaseName = 'asha_ehr.db';
 const db = openDatabaseSync(databaseName);
 
-// Polyfill/augment the returned db with async helper methods when they are
-// not present. Some versions of the native sqlite binding expose helper
-// methods; others don't. The app code expects runAsync/getAllAsync/getFirstAsync/execAsync
-// so we add safe implementations that use transactions + executeSql which
-// avoid calling lower-level prepareAsync directly from JS.
+// Polyfill/augment the returned db with async helper methods when they are not present.
 if (!db.runAsync) {
-  const execSql = (sql, params = []) => new Promise((resolve, reject) => {
-    try {
-      db.transaction(
-        (tx) => {
-          tx.executeSql(
-            sql,
-            params,
-            (_tx, result) => resolve(result),
-            (_tx, err) => {
-              // err may be an object or string depending on platform
-              reject(err || new Error('SQL execution error'));
-              return false;
-            }
-          );
-        },
-        (txErr) => reject(txErr),
-      );
-    } catch (e) {
-      reject(e);
-    }
-  });
+  const execSql = (sql, params = []) =>
+    new Promise((resolve, reject) => {
+      try {
+        db.transaction(
+          (tx) => {
+            tx.executeSql(
+              sql,
+              params,
+              (_tx, result) => resolve(result),
+              (_tx, err) => {
+                reject(err || new Error('SQL execution error'));
+                return false;
+              }
+            );
+          },
+          (txErr) => reject(txErr)
+        );
+      } catch (e) {
+        reject(e);
+      }
+    });
 
   db.runAsync = async (sql, params = []) => {
     const res = await execSql(sql, params);
-    // Normalize result shape: some drivers store insertId/lastInsertRowId/rows
     return res;
   };
 
   db.getAllAsync = async (sql, params = []) => {
     const res = await execSql(sql, params);
-    // Attempt to return rows as an array across different driver shapes
     if (!res) return [];
     if (res.rows && Array.isArray(res.rows._array)) return res.rows._array;
     if (res.rows && Array.isArray(res.rows)) return res.rows;
-    // Some drivers return the rows directly
     if (Array.isArray(res)) return res;
     return [];
   };
 
   db.getFirstAsync = async (sql, params = []) => {
     const rows = await db.getAllAsync(sql, params);
-    return (rows && rows.length > 0) ? rows[0] : null;
+    return rows && rows.length > 0 ? rows[0] : null;
   };
 
   db.execAsync = async (sql) => {
-    // execAsync is used for schema statements; run without parameters
     await execSql(sql, []);
     return true;
   };
 }
 
-// Database version tracking
-const CURRENT_DB_VERSION = 3; // Increment this when schema changes
+const CURRENT_DB_VERSION = 4; // Increment this when schema changes
 
 export const initDatabase = async () => {
   // Check and update database version
   const checkDatabaseVersion = async () => {
     try {
-      // Create version table if it doesn't exist
       await db.execAsync(
         `CREATE TABLE IF NOT EXISTS db_version (
           version INTEGER PRIMARY KEY,
@@ -75,12 +65,10 @@ export const initDatabase = async () => {
         )`
       );
 
-      // Get current version
       const versionRow = await db.getFirstAsync(
         'SELECT version FROM db_version ORDER BY version DESC LIMIT 1'
       );
       const currentVersion = versionRow ? versionRow.version : 0;
-
       console.log('Current database version:', currentVersion);
       return currentVersion;
     } catch (error) {
@@ -94,50 +82,56 @@ export const initDatabase = async () => {
     try {
       console.log('Starting database migrations...');
       const dbVersion = await checkDatabaseVersion();
-      
-      if (dbVersion < CURRENT_DB_VERSION) {
-        // Drop and recreate patients table
-        await db.runAsync('DROP TABLE IF EXISTS patients');
-        
-        // Create patients table with new schema
-        await db.execAsync(
-          `CREATE TABLE patients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            age INTEGER NOT NULL,
-            type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child','general')),
-            village TEXT NOT NULL,
-            health_id TEXT UNIQUE,
-            language TEXT DEFAULT 'en',
-            dob TEXT,
-            phone TEXT,
-            aadhar TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            synced INTEGER DEFAULT 0,
-            firestore_id TEXT,
-            asha_id TEXT
-          )`
-        );
 
-        // Update database version
-        await db.runAsync(
-          'INSERT INTO db_version (version) VALUES (?)',
-          [CURRENT_DB_VERSION]
-        );
-        
-        console.log('Successfully updated database to version', CURRENT_DB_VERSION);
+      if (dbVersion < CURRENT_DB_VERSION) {
+        if (dbVersion < 4) {
+          // ✅ FIX: Ensure migration file exists and is imported correctly
+          const { addMedicinesGivenToVisits } = require('./migrations/addMedicinesGivenToVisits');
+          await addMedicinesGivenToVisits(db);
+        }
+
+        if (dbVersion < 3) {
+          // Drop and recreate patients table
+          await db.runAsync('DROP TABLE IF EXISTS patients');
+
+          // Create patients table with new schema
+          await db.execAsync(
+            `CREATE TABLE patients (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              age INTEGER NOT NULL,
+              type TEXT NOT NULL CHECK (type IN ('pregnant','lactating','child','general')),
+              village TEXT NOT NULL,
+              health_id TEXT UNIQUE,
+              language TEXT DEFAULT 'en',
+              dob TEXT,
+              phone TEXT,
+              aadhar TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              synced INTEGER DEFAULT 0,
+              firestore_id TEXT,
+              asha_id TEXT
+            )`
+          );
+
+          // Update database version
+          await db.runAsync('INSERT INTO db_version (version) VALUES (?)', [
+            CURRENT_DB_VERSION,
+          ]);
+
+          console.log('Successfully updated database to version', CURRENT_DB_VERSION);
+        }
       }
     } catch (error) {
       console.error('Error running migrations:', error);
     }
-  };
+  }; // ✅ FIX: Added missing closing brace and semicolon
+
   // Enable foreign keys and create tables
   const stmts = [
-    // Enable foreign keys and recursive triggers (for cascading deletes)
     `PRAGMA foreign_keys = ON;`,
     `PRAGMA recursive_triggers = ON;`,
-    
-    // Create tables if they don't exist (preserve data)
+
     `CREATE TABLE IF NOT EXISTS patients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -182,6 +176,7 @@ export const initDatabase = async () => {
       bp_diastolic INTEGER,
       weight REAL,
       notes TEXT,
+      medicines_given TEXT,
       next_visit TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       synced INTEGER DEFAULT 0,
@@ -249,7 +244,7 @@ export const initDatabase = async () => {
       last_error TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_attempt DATETIME
-    );`
+    );`,
   ];
 
   // Execute statements sequentially
@@ -258,7 +253,7 @@ export const initDatabase = async () => {
       await db.execAsync(s);
     } catch (e) {
       console.error('Failed to execute schema statement:', e);
-      throw e;  // Stop if any statement fails
+      throw e; // Stop if any statement fails
     }
   }
 

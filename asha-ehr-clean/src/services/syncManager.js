@@ -2,6 +2,8 @@ import { SyncQueueService } from '../database/syncQueueService';
 import NetInfo from '@react-native-community/netinfo';
 import { FirestoreSync } from './firestoreSync';
 import db from '../database/schema';
+import { NavigationStateHelper } from '../utils/navigationHelper';
+import Toast from 'react-native-toast-message';
 
 class SyncManager {
   static instance = null;
@@ -83,6 +85,16 @@ class SyncManager {
       }
 
       console.log('Sync completed successfully');
+      
+      // Only show sync completion toast if not on login screen
+      if (!NavigationStateHelper.isOnLoginScreen()) {
+        Toast.show({
+          type: 'success',
+          text1: 'Sync Complete',
+          text2: 'All changes have been synchronized',
+          visibilityTime: 2000,
+        });
+      }
     } catch (error) {
       console.error('Sync failed:', error);
       // Reset any in_progress items back to pending

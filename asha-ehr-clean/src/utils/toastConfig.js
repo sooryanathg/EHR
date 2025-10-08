@@ -29,20 +29,22 @@ export const toastConfig = {
       {...props}
       style={{
         borderLeftColor: '#f44336',
-        backgroundColor: '#fff',
+        backgroundColor: '#fee2e2',
         borderRadius: 8,
         padding: 16,
         marginHorizontal: 16,
+        borderWidth: 1,
+        borderColor: '#f87171',
       }}
       contentContainerStyle={{ paddingHorizontal: 15 }}
       text1Style={{
         fontSize: 16,
         fontWeight: '600',
-        color: '#2c3e50',
+        color: '#991b1b',
       }}
       text2Style={{
         fontSize: 14,
-        color: '#7f8c8d',
+        color: '#b91c1c',
       }}
     />
   ),
@@ -50,21 +52,23 @@ export const toastConfig = {
     <BaseToast
       {...props}
       style={{
-        borderLeftColor: '#3498db',
-        backgroundColor: '#fff',
+        borderLeftColor: '#64748b',
+        backgroundColor: '#f8fafc',
         borderRadius: 8,
         padding: 16,
         marginHorizontal: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
       }}
       contentContainerStyle={{ paddingHorizontal: 15 }}
       text1Style={{
         fontSize: 16,
-        fontWeight: '600',
-        color: '#2c3e50',
+        fontWeight: '500',
+        color: '#334155',
       }}
       text2Style={{
         fontSize: 14,
-        color: '#7f8c8d',
+        color: '#64748b',
       }}
     />
   ),

@@ -2,32 +2,25 @@ import React, { useState, useEffect, createContext } from 'react';
 import i18n from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import NetInfo from '@react-native-community/netinfo';
+import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView as RN_SafeAreaView, StatusBar } from 'react-native';
+import Toast from 'react-native-toast-message';
 
-// Create a context for ASHA details
-export const AshaContext = createContext(null);
+// Import local files
 import en from './src/i18n/en.json';
 import hi from './src/i18n/hi.json';
 import ta from './src/i18n/ta.json';
 import ml from './src/i18n/ml.json';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView as RN_SafeAreaView, TouchableOpacity } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { toastConfig } from './src/utils/toastConfig';
-import { StatusBar } from 'react-native';
-// Try to load react-native-safe-area-context at runtime; fall back to RN's SafeAreaView if unavailable
-let SafeAreaProvider = null;
-let SafeAreaView = RN_SafeAreaView;
-try {
-  // eslint-disable-next-line global-require
-  const safe = require('react-native-safe-area-context');
-  SafeAreaProvider = safe.SafeAreaProvider;
-  SafeAreaView = safe.SafeAreaView || RN_SafeAreaView;
-} catch (e) {
-  // If the package isn't available at runtime (Expo Go limitations), we'll use RN SafeAreaView
-}
+import { NavigationStateHelper } from './src/utils/navigationHelper';
 import { initDatabase } from './src/database/schema';
+import { syncManager } from './src/services/syncManager';
+import { auth, db } from './src/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 import LoginScreen from './src/auth/LoginScreen';
 import PatientListScreen from './src/screens/NewPatientListScreen';
 import AddPatientScreen from './src/screens/NewAddPatientScreen';
@@ -37,10 +30,20 @@ import AddVaccinationScreen from './src/screens/AddVaccinationScreen';
 import RemindersScreen from './src/screens/RemindersScreen';
 import TodayVisitsScreen from './src/screens/TodayVisitsScreen';
 import ScheduleVisitScreen from './src/screens/ScheduleVisitScreen';
-import NetInfo from '@react-native-community/netinfo';
-import { syncManager } from './src/services/syncManager';
-import { auth, db } from './src/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+
+// Create a context for ASHA details
+export const AshaContext = createContext(null);
+
+// SafeArea handling
+let SafeAreaProvider = null;
+let SafeAreaView = RN_SafeAreaView;
+try {
+  const safe = require('react-native-safe-area-context');
+  SafeAreaProvider = safe.SafeAreaProvider;
+  SafeAreaView = safe.SafeAreaView || RN_SafeAreaView;
+} catch (e) {
+  // Fallback to RN SafeAreaView
+}
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -51,7 +54,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Request notification permissions
 async function registerForPushNotificationsAsync() {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -63,19 +65,17 @@ async function registerForPushNotificationsAsync() {
 }
 
 // i18n initialization
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: { translation: en },
-      hi: { translation: hi },
-      ta: { translation: ta },
-      ml: { translation: ml },
-    },
-    lng: 'en',
-    fallbackLng: 'en',
-    interpolation: { escapeValue: false },
-  });
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    hi: { translation: hi },
+    ta: { translation: ta },
+    ml: { translation: ml },
+  },
+  lng: 'en',
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
+});
 
 const Stack = createNativeStackNavigator();
 
@@ -88,7 +88,6 @@ function LoadingScreen() {
   );
 }
 
-
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
@@ -96,74 +95,75 @@ export default function App() {
 
   useEffect(() => {
     let unsubscribeFn = null;
+
     async function initAll() {
       try {
-        // Initialize notifications first
         await registerForPushNotificationsAsync();
-
-        // Initialize database
         await initDatabase();
 
-        // Load ASHA name from all possible sources
+        // Load ASHA name
         try {
           const user = auth.currentUser;
-          let name = '';
-          
-          // First try AsyncStorage
-          name = await AsyncStorage.getItem('asha_name');
-          
-          // Then try Firestore if we have a user
+          let name = (await AsyncStorage.getItem('asha_name')) || '';
           if (user) {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             if (userDoc.exists() && userDoc.data()?.name) {
               name = userDoc.data().name;
-              // Update AsyncStorage with latest name
               await AsyncStorage.setItem('asha_name', name);
             } else if (user.displayName) {
               name = user.displayName;
               await AsyncStorage.setItem('asha_name', name);
             }
           }
-          
           setAshaName(name || 'ASHA');
         } catch (e) {
           console.warn('Error loading ASHA name:', e);
           setAshaName('ASHA');
         }
 
-        // Check for session expiry (7 days)
+        // Session check
         const loginTimestamp = await AsyncStorage.getItem('asha_login_timestamp');
-        if (loginTimestamp) {
-          const now = Date.now();
-          const sevenDays = 7 * 24 * 60 * 60 * 1000;
-          if (now - parseInt(loginTimestamp, 10) < sevenDays) {
-            setInitialRoute('PatientList');
-          } else {
-            // Session expired, clear login timestamp
-            await AsyncStorage.removeItem('asha_login_timestamp');
-            setInitialRoute('Login');
-          }
+        if (loginTimestamp && Date.now() - parseInt(loginTimestamp, 10) < 7 * 24 * 60 * 60 * 1000) {
+          setInitialRoute('PatientList');
         } else {
+          await AsyncStorage.removeItem('asha_login_timestamp');
           setInitialRoute('Login');
         }
 
-        // After DB is ready, set up connectivity listener for sync
-        let wasConnected = false;
-        const unsub = NetInfo.addEventListener((state) => {
+        // Connectivity listener
+        let wasConnected = true;
+        const unsub = NetInfo.addEventListener(async (state) => {
           const isConnected = Boolean(state.isConnected && state.isInternetReachable);
-          if (!wasConnected && isConnected) {
-            try {
+
+          if (wasConnected && !isConnected && auth.currentUser) {
+            if (NavigationStateHelper.getCurrentScreen() !== 'Login') {
+              Toast.show({
+                type: 'info',
+                text1: 'Working Offline',
+                text2: 'Changes will sync when connection is restored',
+                position: 'top',
+                autoHide: true,
+                visibilityTime: 3000,
+              });
+            }
+          }
+
+          if (!wasConnected && isConnected && auth.currentUser) {
+            if (NavigationStateHelper.getCurrentScreen() !== 'Login') {
               Toast.show({
                 type: 'info',
                 text1: 'Back Online',
                 text2: 'Syncing your data...',
                 position: 'top',
                 autoHide: true,
-                visibilityTime: 2000,
+                visibilityTime: 3000,
               });
-              
-              syncManager.syncData()
-                .then(() => {
+            }
+            try {
+              await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2s
+              await syncManager.syncData();
+              if (NavigationStateHelper.getCurrentScreen() !== 'Login') {
+                setTimeout(() => {
                   Toast.show({
                     type: 'success',
                     text1: 'Sync Complete',
@@ -172,49 +172,41 @@ export default function App() {
                     autoHide: true,
                     visibilityTime: 2000,
                   });
-                })
-                .catch((e) => {
-                  console.warn('Background sync failed:', e);
-                  Toast.show({
-                    type: 'error',
-                    text1: 'Sync Failed',
-                    text2: 'Please try again later',
-                    position: 'top',
-                    autoHide: true,
-                    visibilityTime: 3000,
-                  });
-                });
+                }, 1000);
+              }
             } catch (e) {
-              console.warn('Error invoking syncManager:', e);
+              console.warn('Background sync failed:', e);
+              if (NavigationStateHelper.getCurrentScreen() !== 'Login') {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Sync Failed',
+                  text2: 'Please try again later',
+                  position: 'top',
+                  autoHide: true,
+                  visibilityTime: 3000,
+                });
+              }
             }
           }
+
           wasConnected = isConnected;
         });
 
-        // Normalize unsubscribe function
-        if (typeof unsub === 'function') unsubscribeFn = unsub;
-        else if (unsub && typeof unsub.remove === 'function') unsubscribeFn = () => unsub.remove();
+        // Cleanup
+        unsubscribeFn = typeof unsub === 'function' ? unsub : () => unsub?.remove?.();
 
-        // Listen for auth state changes to trigger sync when user signs in
-        try {
-          const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-            if (user) {
-              console.log('Firebase user signed in:', user.uid);
-              // trigger sync for deferred items
-              syncManager.syncData().catch((e) => console.warn('Sync after sign-in failed:', e));
-            } else {
-              console.log('No Firebase user');
-            }
-          });
-          // Merge cleanup
-          const prevUnsub = unsubscribeFn;
-          unsubscribeFn = () => {
-            if (prevUnsub) prevUnsub();
-            if (unsubscribeAuth) unsubscribeAuth();
-          };
-        } catch (e) {
-          console.warn('Failed to add auth state listener', e);
-        }
+        // Auth listener
+        const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+          if (user && NavigationStateHelper.getCurrentScreen() !== 'Login') {
+            syncManager.syncData().catch((e) => console.warn('Sync after sign-in failed:', e));
+          }
+        });
+
+        const prevUnsub = unsubscribeFn;
+        unsubscribeFn = () => {
+          prevUnsub?.();
+          unsubscribeAuth?.();
+        };
       } catch (error) {
         console.warn('Initialization error:', error);
       } finally {
@@ -225,29 +217,22 @@ export default function App() {
     initAll();
 
     return () => {
-      try {
-        if (unsubscribeFn) unsubscribeFn();
-      } catch (e) {
-        // ignore errors during cleanup
-      }
+      unsubscribeFn?.();
     };
   }, []);
 
-  // Load persisted language and set i18n
+  // Language persistence
   useEffect(() => {
     (async () => {
       try {
         const lng = await AsyncStorage.getItem('@app_language');
-        if (lng) {
-          await i18n.changeLanguage(lng);
-        }
+        if (lng) await i18n.changeLanguage(lng);
       } catch (e) {
         console.warn('Failed to load language', e);
       }
     })();
   }, []);
 
-  // Helper to change language and persist
   const changeLanguage = async (lng) => {
     try {
       await i18n.changeLanguage(lng);
@@ -257,46 +242,37 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  if (isLoading) return <LoadingScreen />;
 
   const AppContent = (
     <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#F9FAFB"
-        translucent={false}
-        hidden={false}
-      />
-      <View style={{ flex: 1 }}>
-        <NavigationContainer>
-          <Stack.Navigator 
-                initialRouteName={initialRoute}
-                screenOptions={{
-                  headerShown: false // Disable default headers globally
-                }}
-              >
-              <Stack.Screen 
-                name="Login" 
-                component={LoginScreen}
-                options={{
-                  headerShown: true,
-                  headerStyle: { backgroundColor: '#fff' },
-                  headerTintColor: '#2c3e50',
-                }}
-              />
-              <Stack.Screen name="PatientList" component={PatientListScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="AddPatient" component={AddPatientScreen} />
-              <Stack.Screen name="PatientProfile" component={PatientProfileScreen} />
-              <Stack.Screen name="AddVisit" component={AddVisitScreen} />
-              <Stack.Screen name="AddVaccination" component={AddVaccinationScreen} />
-              <Stack.Screen name="Reminders" component={RemindersScreen} />
-              <Stack.Screen name="TodayVisits" component={TodayVisitsScreen} />
-              <Stack.Screen name="ScheduleVisit" component={ScheduleVisitScreen} />
-            </Stack.Navigator>
-        </NavigationContainer>
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <NavigationContainer
+        onStateChange={(state) => {
+          const currentRoute = state?.routes[state.routes.length - 1];
+          if (currentRoute) NavigationStateHelper.setCurrentScreen(currentRoute.name);
+        }}
+      >
+        <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{
+              headerShown: true,
+              headerStyle: { backgroundColor: '#fff' },
+              headerTintColor: '#2c3e50',
+            }}
+          />
+          <Stack.Screen name="PatientList" component={PatientListScreen} />
+          <Stack.Screen name="AddPatient" component={AddPatientScreen} />
+          <Stack.Screen name="PatientProfile" component={PatientProfileScreen} />
+          <Stack.Screen name="AddVisit" component={AddVisitScreen} />
+          <Stack.Screen name="AddVaccination" component={AddVaccinationScreen} />
+          <Stack.Screen name="Reminders" component={RemindersScreen} />
+          <Stack.Screen name="TodayVisits" component={TodayVisitsScreen} />
+          <Stack.Screen name="ScheduleVisit" component={ScheduleVisitScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaView>
   );
 
@@ -309,39 +285,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#7f8c8d',
-  },
-  languageBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#f5f5f5',
-  },
-  languageLabel: {
-    marginRight: 8,
-    color: '#333',
-  },
-  langButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginHorizontal: 4,
-  },
-  langText: {
-    color: '#333',
-  },
-  langTextActive: {
-    color: '#3498db',
-    fontWeight: '600',
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
+  loadingText: { marginTop: 20, fontSize: 16, color: '#7f8c8d' },
+  languageBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#f5f5f5' },
+  languageLabel: { marginRight: 8, color: '#333' },
+  langButton: { paddingHorizontal: 8, paddingVertical: 4, marginHorizontal: 4 },
+  langText: { color: '#333' },
+  langTextActive: { color: '#3498db', fontWeight: '600' },
 });

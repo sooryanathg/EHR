@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { AuthService } from '../auth/authService';
 
 export default function ProfileMenu({ visible, onClose, navigation }) {
   const { t, i18n } = useTranslation();
@@ -74,7 +75,8 @@ export default function ProfileMenu({ visible, onClose, navigation }) {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      const { AuthService } = require('../auth/authService');
+      await AuthService.logout();
       onClose();
       navigation.replace('Login');
     } catch (error) {

@@ -8,7 +8,7 @@ export const VisitService = {
       `INSERT INTO visits (
         patient_id, date, type, bp_systolic, bp_diastolic,
         weight, notes, next_visit, medicines_given
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         visit.patient_id,
         visit.date,

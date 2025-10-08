@@ -1,31 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CryptoJS from 'crypto-js';
 import { auth, db } from '../lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-const PIN_KEY = 'asha_pin';
 const USER_ROLE_KEY = 'user_role';
-const SECRET_KEY = 'asha_ehr_secret_key_2024';
 
 export const AuthService = {
-  // Hash PIN using SHA-256
-  hashPIN: (pin) => {
-    return CryptoJS.SHA256(pin).toString();
-  },
-
-  // Set ASHA PIN
-  setASHA_PIN: async (pin) => {
-    try {
-      const hashedPIN = AuthService.hashPIN(pin);
-      await AsyncStorage.setItem(PIN_KEY, hashedPIN);
-      await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
-      return true;
-    } catch (error) {
-      console.error('Error setting PIN:', error);
-      return false;
-    }
-  },
 
   // Register ASHA using email/password in Firebase
   // Accept optional name to create a users/{uid} profile in Firestore
@@ -63,6 +43,9 @@ export const AuthService = {
   // Login ASHA using Firebase email/password
   loginASHA: async (email, password) => {
     try {
+      // Clear any existing auth state first
+      await AuthService.logout();
+      
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       await AsyncStorage.setItem(USER_ROLE_KEY, 'asha');
       await AsyncStorage.setItem('asha_email', email);
@@ -118,80 +101,79 @@ export const AuthService = {
     }
   },
 
-  // Verify ASHA PIN
-  verifyASHA_PIN: async (pin) => {
+  // Check if current session is valid
+  checkSession: async () => {
     try {
-      const storedHashedPIN = await AsyncStorage.getItem(PIN_KEY);
-      if (!storedHashedPIN) return false;
+      // Force reload the current user state
+      await auth.currentUser?.reload();
       
-      const hashedInputPIN = AuthService.hashPIN(pin);
-      const isValid = storedHashedPIN === hashedInputPIN;
-      if (isValid) {
-        // Ensure we have a proper Firebase user signed in, not anonymous
-        try {
-          const currentUser = auth.currentUser;
-          if (!currentUser || currentUser.isAnonymous) {
-            // Try to get stored email/password from AsyncStorage
-            const email = await AsyncStorage.getItem('asha_email');
-            const password = await AsyncStorage.getItem('asha_password');
-            
-            if (email && password) {
-              await AuthService.loginASHA(email, password);
-            } else {
-              console.warn('No stored credentials for Firebase login');
-            }
-          }
-        } catch (firebaseError) {
-          console.warn('Firebase sign-in failed:', firebaseError);
-        }
+      const loginTimestamp = await AsyncStorage.getItem('asha_login_timestamp');
+      const currentUser = auth.currentUser;
+      const email = await AsyncStorage.getItem('asha_email');
+      const uid = await AsyncStorage.getItem('firebase_uid');
+
+      // If any of these are missing, session is invalid
+      if (!loginTimestamp || !currentUser || !email || !uid) {
+        await AuthService.logout();
+        return false;
       }
 
-      return isValid;
-    } catch (error) {
-      console.error('Error verifying PIN:', error);
-      return false;
-    }
-  },
-
-  // Check if PIN is set
-  isPINSet: async () => {
-    try {
-      const pin = await AsyncStorage.getItem(PIN_KEY);
-      return pin !== null;
-    } catch (error) {
-      console.error('Error checking PIN:', error);
-      return false;
-    }
-  },
-
-  // Clear stored PIN (for logout)
-  clearPIN: async () => {
-    try {
-      await AsyncStorage.multiRemove([PIN_KEY, USER_ROLE_KEY, 'firebase_uid']);
-      // Also sign out from Firebase when clearing local PIN
-      try {
-        await signOut(auth);
-      } catch (firebaseSignOutError) {
-        console.warn('Firebase signOut failed:', firebaseSignOutError);
+      // Check if session has expired (7 days)
+      const sessionAge = Date.now() - parseInt(loginTimestamp);
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (sessionAge > sevenDays) {
+        await AuthService.logout();
+        return false;
       }
+
+      // Verify Firebase auth matches stored UID
+      if (!currentUser || currentUser.isAnonymous || currentUser.uid !== uid) {
+        await AuthService.logout();
+        return false;
+      }
+
       return true;
     } catch (error) {
-      console.error('Error clearing PIN:', error);
+      console.error('Error checking session:', error);
+      await AuthService.logout();
       return false;
     }
   }
 
   ,
 
-  // Logout helper: sign out from Firebase and clear stored uid and role
+  // Logout helper: sign out from Firebase and clear all stored credentials
   logout: async () => {
     try {
+      // Clear AsyncStorage first
       try {
-        await signOut(auth);
+        // Clear all authentication related items
+        const keysToRemove = [
+          USER_ROLE_KEY,
+          'firebase_uid',
+          'asha_email',
+          'asha_password',
+          'asha_login_timestamp',
+          'asha_name'
+        ];
+        await AsyncStorage.multiRemove(keysToRemove);
+        
+        // Clear all AsyncStorage for complete cleanup
+        await AsyncStorage.clear();
       } catch (e) {
-        console.warn('Firebase signOut failed during logout:', e);
+        console.warn('AsyncStorage clear failed:', e);
       }
-      await AsyncStorage.multiRemove([USER_ROLE_KEY, 'firebase_uid', PIN_KEY]);
+
+      // Sign out from Firebase
+      try {
+        await auth.signOut();
+      } catch (e) {
+        console.warn('Firebase signOut failed:', e);
+      }
+
+      // Force reload auth state
+      auth.currentUser?.reload();
+
       return true;
     } catch (error) {
       console.error('Error during logout:', error);
